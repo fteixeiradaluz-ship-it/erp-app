@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { getSession } from '@/lib/session'
 
 export async function submitSale(data: {
   customerId: string;

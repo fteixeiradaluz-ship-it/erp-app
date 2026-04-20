@@ -2,7 +2,7 @@ import React from 'react'
 import Sidebar from '@/components/Sidebar'
 import styles from './dashboard.module.css'
 
-import { getSession } from '@/lib/auth'
+import { getSession } from '@/lib/session'
 import { getSettings } from '@/app/actions/settingsActions'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

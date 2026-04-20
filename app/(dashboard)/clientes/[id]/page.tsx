@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import styles from './customerDetail.module.css'
 import { getCustomerDetail } from '@/app/actions/customerActions'
 import { upsertMedicalRecord, deleteMedicalRecord } from '@/app/actions/medicalRecordActions'
-import { getSession } from '@/lib/auth'
+import { getSessionAction } from '@/app/actions/authActions'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -29,7 +29,7 @@ export default function CustomerDetailPage() {
   }, [id])
 
   async function checkSession() {
-    const s = await getSession()
+    const s = await getSessionAction()
     setSession(s)
   }
 
