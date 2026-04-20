@@ -47,3 +47,18 @@
 .danger:hover {
   background: rgba(255, 77, 77, 0.1);
 }
+
+.small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.medium {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+
+.large {
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+}
