@@ -1,0 +1,194 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role               String     @default("SELLER") // ADMIN or SELLER or SECRETARY
+  cpf                String?    @unique
+  phone              String?
+  salary             Float?
+  admissionDate      DateTime?
+  position           String?
+  commissionPercent  Float?     // Nullable to fallback to global Settings.commissionPercentage if needed
+  sales              Sale[]
+  logs               AuditLog[]
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  sales          Sale[]
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  quotations     Quotation[]
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Product {
+  id         String    @id @default(cuid())
+  name       String
+  price      Float
+  cost       Float
+  stock      Int
+  saleItems  SaleItem[]
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Supplier {
+  id        String    @id @default(cuid())
+  name      String
+  cnpj      String?   @unique
+  email     String?
+  phone     String?
+  products  Product[]
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Sale {
+  id            String   @id @default(cuid())
+  userId        String
+  customerId    String
+  user          User     @relation(fields: [userId], references: [id])
+  customer      Customer @relation(fields: [customerId], references: [id])
+  items         SaleItem[]
+  paymentMethod String // A_VISTA, PIX, CARTAO
+  totalAmount   Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  productId String
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+model Bank {
+  id           String   @id @default(cuid())
+  name         String
+  agency       String?
+  account      String?
+  balance      Float    @default(0)
+  transactions Transaction[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  bankId      String
+  bank        Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  type        String   // INCOME, EXPENSE
+  amount      Float
+  description String
+  status      String   @default("PENDING") // PENDING, PAID
+  dueDate     DateTime?
+  payDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Settings {
+  id                       String   @id @default(cuid())
+  companyName              String   @default("Minha Empresa")
+  companyCnpj              String?
+  companyAddress           String?
+  companyPhone             String?
+  companyLogo              String?
+  commissionPercentage     Float    @default(0)
+  taxPercentage            Float    @default(0)
+  fixedExpensesPercentage  Float    @default(0)
+  updatedAt                DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // e.g., DELETE_PRODUCT, UPDATE_USER
+  entity    String   // e.g., Product, User
+  details   String?  // JSON stringified details
+  createdAt DateTime @default(now())
+}
+
+model Appointment {
+  id              String      @id @default(cuid())
+  customerId      String
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  date            DateTime
+  description     String?
+  status          String      @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  isReturn        Boolean     @default(false)
+  
+  // Self-relation to link a return appointment back to its original appointment
+  originalApptId  String?
+  originalAppt    Appointment? @relation("ReturnAppointments", fields: [originalApptId], references: [id])
+  returnAppts     Appointment[] @relation("ReturnAppointments")
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  medicalRecord   MedicalRecord?
+}
+
+model MedicalRecord {
+  id              String      @id @default(cuid())
+  customerId      String
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  appointmentId   String?     @unique
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
+  content         String      @db.Text
+  authorId        String      // User ID who created the record
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model Quotation {
+  id            String          @id @default(cuid())
+  customerId    String
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  items         QuotationItem[]
+  totalAmount   Float
+  status        String          @default("OPEN") // OPEN, ACCEPTED, REJECTED, CONVERTED
+  validUntil    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model QuotationItem {
+  id            String    @id @default(cuid())
+  quotationId   String
+  quotation     Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  description   String
+  quantity      Int
+  price         Float
+}

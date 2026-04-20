@@ -1,0 +1,90 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: #ffffff;
+  backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border-gold);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 0;
+  z-index: 50;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.logo {
+  padding: 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 2.5rem;
+  letter-spacing: 1px;
+}
+
+.erpText {
+  color: #111;
+}
+
+.premiumText {
+  color: var(--gold-primary);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.5rem;
+  padding: 0 1rem;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  color: #555;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.navItem:hover {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--gold-primary);
+}
+
+.active {
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.2) 0%, transparent 100%);
+  color: var(--gold-primary);
+  border-left: 3px solid var(--gold-primary);
+}
+
+.icon {
+  font-size: 1.2rem;
+}
+
+.footer {
+  padding: 0 1.5rem;
+}
+
+.logoutBtn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #444;
+  padding: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.logoutBtn:hover {
+  background: rgba(255, 50, 50, 0.2);
+  border-color: rgba(255, 50, 50, 0.5);
+  color: #ff6b6b;
+}

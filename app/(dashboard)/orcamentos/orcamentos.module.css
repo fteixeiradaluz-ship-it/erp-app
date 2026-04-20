@@ -1,0 +1,200 @@
+.container {
+  padding: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.tableWrapper {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-gold);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background: #fdfaf0;
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #666;
+  text-transform: uppercase;
+  border-bottom: 1px solid #eee;
+}
+
+.table td {
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid #f9f9f9;
+}
+
+.statusBadge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.open { background: #e3f2fd; color: #1976d2; }
+.accepted { background: #e8f5e9; color: #2e7d32; }
+.rejected { background: #ffebee; color: #c62828; }
+.converted { background: #fff8e1; color: #f57f17; }
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalContent {
+  padding: 1.5rem;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.select {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: white;
+}
+
+.itemsSection {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  border-top: 1px solid #eee;
+  padding-top: 2rem;
+}
+
+.productPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pickerGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.pickerBtn {
+  background: white;
+  border: 1px solid #eee;
+  padding: 0.75rem;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.pickerBtn:hover {
+  border-color: var(--gold-primary);
+  background: #fffcf0;
+}
+
+.cart {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cartItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.qtyArea {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qtyArea input {
+  width: 50px;
+  padding: 0.25rem;
+  text-align: center;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.qtyArea button {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.totalRow {
+  margin-top: 1rem;
+  text-align: right;
+  font-size: 1.1rem;
+  color: var(--gold-primary);
+}
+
+.modalFooter {
+  margin-top: 2.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
