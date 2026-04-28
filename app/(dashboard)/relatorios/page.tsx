@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatCurrency } from '@/lib/format'
 
-type TabType = 'sales' | 'inventory' | 'financial' | 'appointments' | 'shipping'
+type TabType = 'sales' | 'inventory' | 'financial' | 'appointments' | 'shipping' | 'deleted_sales'
 
 export default function RelatoriosPage() {
   const [role, setRole] = useState<string>('')
@@ -30,7 +30,8 @@ export default function RelatoriosPage() {
     inventory: ['product', 'supplier', 'cost', 'price', 'stock'],
     financial: ['date', 'description', 'bank', 'type', 'amount'],
     appointments: ['date', 'time', 'customer', 'phone', 'status', 'return'],
-    shipping: ['date', 'customer', 'phone', 'seller', 'docs', 'status']
+    shipping: ['date', 'customer', 'phone', 'seller', 'docs', 'status'],
+    deleted_sales: ['date', 'customer', 'seller', 'total', 'justification', 'actions']
   })
   const [showColumnPicker, setShowColumnPicker] = useState(false)
 
@@ -74,6 +75,14 @@ export default function RelatoriosPage() {
       { id: 'seller', label: 'Vendedor' },
       { id: 'docs', label: 'Docs' },
       { id: 'status', label: 'Status' }
+    ],
+    deleted_sales: [
+      { id: 'date', label: 'Data' },
+      { id: 'customer', label: 'Cliente' },
+      { id: 'seller', label: 'Vendedor' },
+      { id: 'total', label: 'Total' },
+      { id: 'justification', label: 'Justificativa' },
+      { id: 'actions', label: 'Ver' }
     ]
   }
 
@@ -121,7 +130,7 @@ export default function RelatoriosPage() {
     }
 
     let res: any
-    if (activeTab === 'sales') res = await getSalesReport(startDate, endDate)
+    if (activeTab === 'sales' || activeTab === 'deleted_sales') res = await getSalesReport(startDate, endDate)
     else if (activeTab === 'inventory') res = await getInventoryReport()
     else if (activeTab === 'financial') res = await getFinancialReport(startDate, endDate)
     else if (activeTab === 'appointments') res = await getAppointmentsReport(startDate, endDate)
@@ -131,7 +140,7 @@ export default function RelatoriosPage() {
     }
 
     if (res?.success) {
-      if (activeTab === 'sales') setData(res.sales)
+      if (activeTab === 'sales' || activeTab === 'deleted_sales') setData(res.sales)
       else if (activeTab === 'inventory') setData(res.products)
       else if (activeTab === 'financial') setData(res.transactions)
       else if (activeTab === 'appointments') setData(res.appointments)
@@ -171,7 +180,7 @@ export default function RelatoriosPage() {
       const rowData: string[] = []
       
       currentCols.forEach(col => {
-        if (activeTab === 'sales') {
+        if (activeTab === 'sales' || activeTab === 'deleted_sales') {
           if (col.id === 'date') rowData.push(new Date(item.createdAt).toLocaleDateString())
           else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
           else if (col.id === 'items') rowData.push(`"${item.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(' | ')}"`)
@@ -182,6 +191,7 @@ export default function RelatoriosPage() {
              rowData.push((item.totalAmount * (comm / 100)).toFixed(2))
           }
           else if (col.id === 'total') rowData.push(item.totalAmount.toString())
+          else if (col.id === 'justification') rowData.push(`"${item.deletionJustification || ''}"`)
         }
         else if (activeTab === 'inventory') {
           if (col.id === 'product') rowData.push(item.name)
@@ -254,8 +264,17 @@ export default function RelatoriosPage() {
           className={`${styles.tab} ${activeTab === 'sales' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('sales')}
         >
-          🛒 {isAdmin ? 'Vendas (Todos)' : 'Minhas Vendas'}
+          🛒 {isAdmin ? 'Vendas (Ativas)' : 'Minhas Vendas'}
         </div>
+
+        {isAdmin && (
+          <div
+            className={`${styles.tab} ${activeTab === 'deleted_sales' ? styles.activeTab : ''}`}
+            onClick={() => setActiveTab('deleted_sales')}
+          >
+            🗑️ Vendas Excluídas
+          </div>
+        )}
 
         {(isAdmin || isSeller) && (
           <div
@@ -388,7 +407,7 @@ export default function RelatoriosPage() {
                   <tr><td colSpan={visibleColumns.sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
                   <tr><td colSpan={visibleColumns.sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
-                ) : data.filter(s => sellerFilter ? s.user.name === sellerFilter : true).map(s => {
+                ) : data.filter(s => (sellerFilter ? s.user.name === sellerFilter : true) && !s.deletedAt).map(s => {
                   const comm = s.user.commissionPercent !== null ? s.user.commissionPercent : globalCommission
                   const commVal = s.totalAmount * (comm / 100)
                   const isVoided = !!s.deletedAt
@@ -399,7 +418,6 @@ export default function RelatoriosPage() {
                       {isColVisible('customer') && (
                         <td>
                           {s.customer?.name || '---'}
-                          {isVoided && <div style={{ fontSize: '0.7rem', color: '#ef4444', textDecoration: 'none' }}>ANULADA</div>}
                         </td>
                       )}
                       {isColVisible('items') && (
@@ -413,23 +431,13 @@ export default function RelatoriosPage() {
                       {isColVisible('total') && isAdmin && <td style={{ fontWeight: 'bold', color: isVoided ? '#999' : 'var(--gold-primary)' }}>{formatCurrency(s.totalAmount)}</td>}
                       {isColVisible('actions') && isAdmin && (
                         <td className={styles.actionsCell} style={{ textAlign: 'center' }}>
-                          {!isVoided ? (
-                            <button 
-                              className={`${styles.actionBtn} ${styles.deleteBtn}`} 
-                              title="Excluir Venda"
-                              onClick={() => { setSelectedSale(s); setShowDeleteModal(true) }}
-                            >
-                              🗑️
-                            </button>
-                          ) : (
-                            <button 
-                              className={`${styles.actionBtn} ${styles.viewBtn}`} 
-                              title="Ver Justificativa"
-                              onClick={() => { setSelectedSale(s); setShowJustificationModal(true) }}
-                            >
-                              👁️
-                            </button>
-                          )}
+                          <button 
+                            className={`${styles.actionBtn} ${styles.deleteBtn}`} 
+                            title="Excluir Venda"
+                            onClick={() => { setSelectedSale(s); setShowDeleteModal(true) }}
+                          >
+                            🗑️
+                          </button>
                         </td>
                       )}
                     </tr>
@@ -454,6 +462,51 @@ export default function RelatoriosPage() {
                     {isAdmin && <td colSpan={2}></td>}
                   </tr>
                 )}
+              </tbody>
+            </>
+          )}
+
+          {activeTab === 'deleted_sales' && (
+            <>
+              <thead>
+                <tr>
+                  {isColVisible('date') && <th>Data</th>}
+                  {isColVisible('customer') && <th>Cliente</th>}
+                  {isColVisible('seller') && <th>Vendedor</th>}
+                  {isColVisible('total') && <th>Total</th>}
+                  {isColVisible('justification') && <th>Justificativa</th>}
+                  {isColVisible('actions') && <th style={{ textAlign: 'center' }}>Ver</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={visibleColumns.deleted_sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                ) : data.filter(s => (sellerFilter ? s.user.name === sellerFilter : true) && !!s.deletedAt).length === 0 ? (
+                  <tr><td colSpan={visibleColumns.deleted_sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda excluída encontrada.</td></tr>
+                ) : data.filter(s => (sellerFilter ? s.user.name === sellerFilter : true) && !!s.deletedAt).map(s => (
+                  <tr key={s.id} className={styles.voidedRow}>
+                    {isColVisible('date') && <td>{new Date(s.createdAt).toLocaleDateString()}</td>}
+                    {isColVisible('customer') && <td>{s.customer?.name || '---'}</td>}
+                    {isColVisible('seller') && <td>{s.user?.name || '---'}</td>}
+                    {isColVisible('total') && <td style={{ fontWeight: 'bold' }}>{formatCurrency(s.totalAmount)}</td>}
+                    {isColVisible('justification') && (
+                      <td style={{ fontSize: '0.85rem', color: '#666', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {s.deletionJustification}
+                      </td>
+                    )}
+                    {isColVisible('actions') && (
+                      <td className={styles.actionsCell} style={{ textAlign: 'center' }}>
+                        <button 
+                          className={`${styles.actionBtn} ${styles.viewBtn}`} 
+                          title="Ver Justificativa Completa"
+                          onClick={() => { setSelectedSale(s); setShowJustificationModal(true) }}
+                        >
+                          👁️
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
               </tbody>
             </>
           )}
