@@ -24,6 +24,72 @@ export default function RelatoriosPage() {
   const [endDate, setEndDate] = useState('')
   const [sellerFilter, setSellerFilter] = useState('')
 
+  // Column visibility state
+  const [visibleColumns, setVisibleColumns] = useState<Record<TabType, string[]>>({
+    sales: ['date', 'customer', 'items', 'seller', 'method', 'commission', 'total', 'actions'],
+    inventory: ['product', 'supplier', 'cost', 'price', 'stock'],
+    financial: ['date', 'description', 'bank', 'type', 'amount'],
+    appointments: ['date', 'time', 'customer', 'phone', 'status', 'return'],
+    shipping: ['date', 'customer', 'phone', 'seller', 'docs', 'status']
+  })
+  const [showColumnPicker, setShowColumnPicker] = useState(false)
+
+  const columnsConfig: Record<TabType, { id: string, label: string }[]> = {
+    sales: [
+      { id: 'date', label: 'Data' },
+      { id: 'customer', label: 'Cliente' },
+      { id: 'items', label: 'Itens' },
+      { id: 'seller', label: 'Vendedor' },
+      { id: 'method', label: 'Método' },
+      { id: 'commission', label: 'Comissão' },
+      { id: 'total', label: 'Total' },
+      { id: 'actions', label: 'Ações' }
+    ],
+    inventory: [
+      { id: 'product', label: 'Produto' },
+      { id: 'supplier', label: 'Fornecedor' },
+      { id: 'cost', label: 'Custo' },
+      { id: 'price', label: 'Preço' },
+      { id: 'stock', label: 'Estoque' }
+    ],
+    financial: [
+      { id: 'date', label: 'Data' },
+      { id: 'description', label: 'Descrição' },
+      { id: 'bank', label: 'Banco' },
+      { id: 'type', label: 'Tipo' },
+      { id: 'amount', label: 'Valor' }
+    ],
+    appointments: [
+      { id: 'date', label: 'Data' },
+      { id: 'time', label: 'Hora' },
+      { id: 'customer', label: 'Cliente' },
+      { id: 'phone', label: 'Telefone' },
+      { id: 'status', label: 'Status' },
+      { id: 'return', label: 'Retorno' }
+    ],
+    shipping: [
+      { id: 'date', label: 'Data' },
+      { id: 'customer', label: 'Cliente' },
+      { id: 'phone', label: 'Telefone' },
+      { id: 'seller', label: 'Vendedor' },
+      { id: 'docs', label: 'Docs' },
+      { id: 'status', label: 'Status' }
+    ]
+  }
+
+  const toggleColumn = (colId: string) => {
+    setVisibleColumns(prev => {
+      const current = prev[activeTab]
+      if (current.includes(colId)) {
+        return { ...prev, [activeTab]: current.filter(id => id !== colId) }
+      } else {
+        return { ...prev, [activeTab]: [...current, colId] }
+      }
+    })
+  }
+
+  const isColVisible = (colId: string) => visibleColumns[activeTab].includes(colId)
+
   // Deletion state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showJustificationModal, setShowJustificationModal] = useState(false)
@@ -97,37 +163,60 @@ export default function RelatoriosPage() {
     if (data.length === 0) return alert('Sem dados para exportar')
     let csvContent = 'data:text/csv;charset=utf-8,'
 
-    if (activeTab === 'sales') {
-      csvContent += 'Data,Cliente,Itens,Vendedor,Metodo,Comissao,Total\n'
-      const filtered = sellerFilter ? data.filter(s => s.user.name === sellerFilter) : data
-      filtered.forEach((s: any) => {
-        const comm = s.user.commissionPercent !== null ? s.user.commissionPercent : globalCommission
-        const commVal = s.totalAmount * (comm / 100)
-        const items = s.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(' | ')
-        csvContent += `${new Date(s.createdAt).toLocaleDateString()},${s.customer.name},"${items}",${s.user.name},${s.paymentMethod},${commVal.toFixed(2)},${s.totalAmount}\n`
+    // Header based on visible columns
+    const currentCols = columnsConfig[activeTab].filter(col => isColVisible(col.id))
+    csvContent += currentCols.map(c => c.label).join(',') + '\n'
+
+    data.forEach((item: any) => {
+      const rowData: string[] = []
+      
+      currentCols.forEach(col => {
+        if (activeTab === 'sales') {
+          if (col.id === 'date') rowData.push(new Date(item.createdAt).toLocaleDateString())
+          else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
+          else if (col.id === 'items') rowData.push(`"${item.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(' | ')}"`)
+          else if (col.id === 'seller') rowData.push(item.user?.name || '---')
+          else if (col.id === 'method') rowData.push(item.paymentMethod)
+          else if (col.id === 'commission') {
+             const comm = item.user.commissionPercent !== null ? item.user.commissionPercent : globalCommission
+             rowData.push((item.totalAmount * (comm / 100)).toFixed(2))
+          }
+          else if (col.id === 'total') rowData.push(item.totalAmount.toString())
+        }
+        else if (activeTab === 'inventory') {
+          if (col.id === 'product') rowData.push(item.name)
+          else if (col.id === 'supplier') rowData.push(item.supplier?.name || '---')
+          else if (col.id === 'cost') rowData.push(item.cost.toString())
+          else if (col.id === 'price') rowData.push(item.price.toString())
+          else if (col.id === 'stock') rowData.push(item.stock.toString())
+        }
+        else if (activeTab === 'financial') {
+          if (col.id === 'date') rowData.push(new Date(item.createdAt).toLocaleDateString())
+          else if (col.id === 'description') rowData.push(`"${item.description}"`)
+          else if (col.id === 'bank') rowData.push(item.bank?.name || '---')
+          else if (col.id === 'type') rowData.push(item.type)
+          else if (col.id === 'amount') rowData.push(item.amount.toString())
+        }
+        else if (activeTab === 'appointments') {
+          const dt = new Date(item.date)
+          if (col.id === 'date') rowData.push(dt.toLocaleDateString())
+          else if (col.id === 'time') rowData.push(dt.toLocaleTimeString())
+          else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
+          else if (col.id === 'phone') rowData.push(item.customer?.phone || '---')
+          else if (col.id === 'status') rowData.push(item.status)
+          else if (col.id === 'return') rowData.push(item.isReturn ? 'Sim' : 'Não')
+        }
+        else if (activeTab === 'shipping') {
+          if (col.id === 'date') rowData.push(new Date(item.createdAt).toLocaleDateString())
+          else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
+          else if (col.id === 'phone') rowData.push(item.customer?.phone || '---')
+          else if (col.id === 'seller') rowData.push(item.user?.name || '---')
+          else if (col.id === 'docs') rowData.push(`${item.nfGenerated ? 'NF' : ''} ${item.labelGenerated ? 'Etiqueta' : ''}`)
+          else if (col.id === 'status') rowData.push('ENVIADO')
+        }
       })
-    } else if (activeTab === 'inventory') {
-      csvContent += 'Produto,Estoque,Custo,Venda,Fornecedor\n'
-      data.forEach((p: any) => {
-        csvContent += `${p.name},${p.stock},${p.cost},${p.price},${p.supplier?.name || '---'}\n`
-      })
-    } else if (activeTab === 'financial') {
-      csvContent += 'Data,Descricao,Banco,Tipo,Valor\n'
-      data.forEach((t: any) => {
-        csvContent += `${new Date(t.createdAt).toLocaleDateString()},${t.description},${t.bank.name},${t.type},${t.amount}\n`
-      })
-    } else if (activeTab === 'appointments') {
-      csvContent += 'Data,Hora,Cliente,Telefone,Status,Retorno\n'
-      data.forEach((a: any) => {
-        const dt = new Date(a.date)
-        csvContent += `${dt.toLocaleDateString()},${dt.toLocaleTimeString()},${a.customer.name},${a.customer.phone || '---'},${a.status},${a.isReturn ? 'Sim' : 'Não'}\n`
-      })
-    } else if (activeTab === 'shipping') {
-      csvContent += 'Data,Cliente,Telefone,Vendedor,NF,Etiqueta\n'
-      data.forEach((s: any) => {
-        csvContent += `${new Date(s.createdAt).toLocaleDateString()},${s.customer.name},${s.customer.phone || '---'},${s.user.name},${s.nfGenerated ? 'Sim' : 'Não'},${s.labelGenerated ? 'Sim' : 'Não'}\n`
-      })
-    }
+      csvContent += rowData.join(',') + '\n'
+    })
 
     const link = document.createElement('a')
     link.setAttribute('href', encodeURI(csvContent))
@@ -240,6 +329,41 @@ export default function RelatoriosPage() {
         <Button variant="secondary" onClick={() => { setStartDate(''); setEndDate(''); setSellerFilter('') }}>
           Limpar Filtros
         </Button>
+        <div style={{ position: 'relative' }}>
+          <Button variant="secondary" onClick={() => setShowColumnPicker(!showColumnPicker)}>
+            ⚙️ Colunas
+          </Button>
+          {showColumnPicker && (
+            <div style={{
+              position: 'absolute',
+              top: '110%',
+              right: 0,
+              background: '#fff',
+              border: '1px solid var(--border-gold)',
+              borderRadius: '8px',
+              padding: '1rem',
+              zIndex: 100,
+              boxShadow: 'var(--shadow-md)',
+              minWidth: '200px'
+            }}>
+              <h4 style={{ fontSize: '0.8rem', color: 'var(--gold-primary)', marginBottom: '0.8rem', borderBottom: '1px solid var(--background)', paddingBottom: '0.4rem' }}>
+                Exibir Colunas
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
+                {columnsConfig[activeTab].map(col => (
+                  <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={isColVisible(col.id)} 
+                      onChange={() => toggleColumn(col.id)}
+                    />
+                    {col.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         <Button onClick={exportCSV}>📤 Exportar CSV</Button>
       </Card>
 
@@ -249,21 +373,21 @@ export default function RelatoriosPage() {
             <>
               <thead>
                 <tr>
-                  <th>Data</th>
-                  <th>Cliente</th>
-                  <th>Itens Comprados</th>
-                  {isAdmin && <th>Vendedor</th>}
-                   <th>Método</th>
-                  <th>Minha Comissão</th>
-                  {isAdmin && <th>Total Venda</th>}
-                  {isAdmin && <th style={{ textAlign: 'center' }}>Ações</th>}
+                  {isColVisible('date') && <th>Data</th>}
+                  {isColVisible('customer') && <th>Cliente</th>}
+                  {isColVisible('items') && <th>Itens Comprados</th>}
+                  {isColVisible('seller') && isAdmin && <th>Vendedor</th>}
+                  {isColVisible('method') && <th>Método</th>}
+                  {isColVisible('commission') && <th>Minha Comissão</th>}
+                  {isColVisible('total') && isAdmin && <th>Total Venda</th>}
+                  {isColVisible('actions') && isAdmin && <th style={{ textAlign: 'center' }}>Ações</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={isAdmin ? 8 : 5} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={visibleColumns.sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={isAdmin ? 8 : 5} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
+                  <tr><td colSpan={visibleColumns.sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
                 ) : data.filter(s => sellerFilter ? s.user.name === sellerFilter : true).map(s => {
                   const comm = s.user.commissionPercent !== null ? s.user.commissionPercent : globalCommission
                   const commVal = s.totalAmount * (comm / 100)
@@ -271,19 +395,23 @@ export default function RelatoriosPage() {
 
                   return (
                     <tr key={s.id} className={isVoided ? styles.voidedRow : ''}>
-                      <td>{new Date(s.createdAt).toLocaleDateString()}</td>
-                      <td>
-                        {s.customer?.name || '---'}
-                        {isVoided && <div style={{ fontSize: '0.7rem', color: '#ef4444', textDecoration: 'none' }}>ANULADA</div>}
-                      </td>
-                      <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
-                        {s.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(', ')}
-                      </td>
-                      {isAdmin && <td>{s.user?.name || '---'} <span style={{ fontSize: '0.7em', color: '#888' }}>({comm}%)</span></td>}
-                      <td>{s.paymentMethod}</td>
-                      <td style={{ color: isVoided ? '#999' : 'var(--success)', fontWeight: 'bold' }}>{formatCurrency(commVal)}</td>
-                      {isAdmin && <td style={{ fontWeight: 'bold', color: isVoided ? '#999' : 'var(--gold-primary)' }}>{formatCurrency(s.totalAmount)}</td>}
-                      {isAdmin && (
+                      {isColVisible('date') && <td>{new Date(s.createdAt).toLocaleDateString()}</td>}
+                      {isColVisible('customer') && (
+                        <td>
+                          {s.customer?.name || '---'}
+                          {isVoided && <div style={{ fontSize: '0.7rem', color: '#ef4444', textDecoration: 'none' }}>ANULADA</div>}
+                        </td>
+                      )}
+                      {isColVisible('items') && (
+                        <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
+                          {s.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(', ')}
+                        </td>
+                      )}
+                      {isColVisible('seller') && isAdmin && <td>{s.user?.name || '---'} <span style={{ fontSize: '0.7em', color: '#888' }}>({comm}%)</span></td>}
+                      {isColVisible('method') && <td>{s.paymentMethod}</td>}
+                      {isColVisible('commission') && <td style={{ color: isVoided ? '#999' : 'var(--success)', fontWeight: 'bold' }}>{formatCurrency(commVal)}</td>}
+                      {isColVisible('total') && isAdmin && <td style={{ fontWeight: 'bold', color: isVoided ? '#999' : 'var(--gold-primary)' }}>{formatCurrency(s.totalAmount)}</td>}
+                      {isColVisible('actions') && isAdmin && (
                         <td className={styles.actionsCell} style={{ textAlign: 'center' }}>
                           {!isVoided ? (
                             <button 
@@ -334,31 +462,33 @@ export default function RelatoriosPage() {
             <>
               <thead>
                 <tr>
-                  <th>Data Venda</th>
-                  <th>Cliente</th>
-                  <th>Telefone</th>
-                  <th>Vendedor</th>
-                  <th>Status Documentação</th>
-                  <th>Status Envio</th>
+                  {isColVisible('date') && <th>Data Venda</th>}
+                  {isColVisible('customer') && <th>Cliente</th>}
+                  {isColVisible('phone') && <th>Telefone</th>}
+                  {isColVisible('seller') && <th>Vendedor</th>}
+                  {isColVisible('docs') && <th>Status Documentação</th>}
+                  {isColVisible('status') && <th>Status Envio</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={visibleColumns.shipping.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum envio finalizado encontrado.</td></tr>
+                  <tr><td colSpan={visibleColumns.shipping.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum envio finalizado encontrado.</td></tr>
                 ) : data.map(s => (
                   <tr key={s.id}>
-                    <td>{new Date(s.createdAt).toLocaleDateString()}</td>
-                    <td style={{ fontWeight: '600' }}>{s.customer?.name || '---'}</td>
-                    <td>{s.customer?.phone || '---'}</td>
-                    <td>{s.user?.name || '---'}</td>
-                    <td>
-                      <span style={{ fontSize: '0.8rem' }}>
-                        {s.nfGenerated ? '✅ NF' : '❌ NF'} | {s.labelGenerated ? '✅ Etiqueta' : '❌ Etiqueta'}
-                      </span>
-                    </td>
-                    <td><span style={{ color: 'var(--success)', fontWeight: 'bold' }}>🚚 ENVIADO</span></td>
+                    {isColVisible('date') && <td>{new Date(s.createdAt).toLocaleDateString()}</td>}
+                    {isColVisible('customer') && <td style={{ fontWeight: '600' }}>{s.customer?.name || '---'}</td>}
+                    {isColVisible('phone') && <td>{s.customer?.phone || '---'}</td>}
+                    {isColVisible('seller') && <td>{s.user?.name || '---'}</td>}
+                    {isColVisible('docs') && (
+                      <td>
+                        <span style={{ fontSize: '0.8rem' }}>
+                          {s.nfGenerated ? '✅ NF' : '❌ NF'} | {s.labelGenerated ? '✅ Etiqueta' : '❌ Etiqueta'}
+                        </span>
+                      </td>
+                    )}
+                    {isColVisible('status') && <td><span style={{ color: 'var(--success)', fontWeight: 'bold' }}>🚚 ENVIADO</span></td>}
                   </tr>
                 ))}
               </tbody>
@@ -369,31 +499,31 @@ export default function RelatoriosPage() {
             <>
               <thead>
                 <tr>
-                  <th>Data</th>
-                  <th>Hora</th>
-                  <th>Cliente</th>
-                  <th>Telefone</th>
-                  <th>Status</th>
-                  <th>Retorno?</th>
+                  {isColVisible('date') && <th>Data</th>}
+                  {isColVisible('time') && <th>Hora</th>}
+                  {isColVisible('customer') && <th>Cliente</th>}
+                  {isColVisible('phone') && <th>Telefone</th>}
+                  {isColVisible('status') && <th>Status</th>}
+                  {isColVisible('return') && <th>Retorno?</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={visibleColumns.appointments.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>Nenhuma consulta no período.</td></tr>
+                  <tr><td colSpan={visibleColumns.appointments.length} style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>Nenhuma consulta no período.</td></tr>
                 ) : data.map((a: any) => {
                   const dt = new Date(a.date)
                   const statusColor = a.status === 'COMPLETED' ? 'var(--success)' : a.status === 'CANCELLED' ? 'var(--error)' : 'var(--gold-primary)'
                   const statusLabel = a.status === 'COMPLETED' ? 'Realizada' : a.status === 'CANCELLED' ? 'Cancelada' : 'Agendada'
                   return (
                     <tr key={a.id}>
-                      <td>{dt.toLocaleDateString()}</td>
-                      <td>{dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                      <td style={{ fontWeight: '600' }}>{a.customer?.name || '---'}</td>
-                      <td>{a.customer?.phone || '---'}</td>
-                      <td><span style={{ color: statusColor, fontWeight: 'bold' }}>{statusLabel}</span></td>
-                      <td style={{ color: a.isReturn ? 'var(--info)' : 'var(--text-secondary)' }}>{a.isReturn ? '🔄 Sim' : 'Não'}</td>
+                      {isColVisible('date') && <td>{dt.toLocaleDateString()}</td>}
+                      {isColVisible('time') && <td>{dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>}
+                      {isColVisible('customer') && <td style={{ fontWeight: '600' }}>{a.customer?.name || '---'}</td>}
+                      {isColVisible('phone') && <td>{a.customer?.phone || '---'}</td>}
+                      {isColVisible('status') && <td><span style={{ color: statusColor, fontWeight: 'bold' }}>{statusLabel}</span></td>}
+                      {isColVisible('return') && <td style={{ color: a.isReturn ? 'var(--info)' : 'var(--text-secondary)' }}>{a.isReturn ? '🔄 Sim' : 'Não'}</td>}
                     </tr>
                   )
                 })}
@@ -405,25 +535,27 @@ export default function RelatoriosPage() {
             <>
               <thead>
                 <tr>
-                  <th>Produto</th>
-                  <th>Fornecedor</th>
-                  <th>Custo</th>
-                  <th>Preço Venda</th>
-                  <th>Estoque</th>
+                  {isColVisible('product') && <th>Produto</th>}
+                  {isColVisible('supplier') && <th>Fornecedor</th>}
+                  {isColVisible('cost') && <th>Custo</th>}
+                  {isColVisible('price') && <th>Preço Venda</th>}
+                  {isColVisible('stock') && <th>Estoque</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={visibleColumns.inventory.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.map(p => (
                   <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td>{p.supplier?.name || '---'}</td>
-                    <td>{formatCurrency(p.cost)}</td>
-                    <td>{formatCurrency(p.price)}</td>
-                    <td style={{ fontWeight: 'bold', color: p.stock <= 5 ? 'var(--error)' : 'inherit' }}>
-                      {p.stock <= 5 ? `⚠️ ${p.stock}` : p.stock}
-                    </td>
+                    {isColVisible('product') && <td>{p.name}</td>}
+                    {isColVisible('supplier') && <td>{p.supplier?.name || '---'}</td>}
+                    {isColVisible('cost') && <td>{formatCurrency(p.cost)}</td>}
+                    {isColVisible('price') && <td>{formatCurrency(p.price)}</td>}
+                    {isColVisible('stock') && (
+                      <td style={{ fontWeight: 'bold', color: p.stock <= 5 ? 'var(--error)' : 'inherit' }}>
+                        {p.stock <= 5 ? `⚠️ ${p.stock}` : p.stock}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -434,27 +566,29 @@ export default function RelatoriosPage() {
             <>
               <thead>
                 <tr>
-                  <th>Data</th>
-                  <th>Descrição</th>
-                  <th>Banco</th>
-                  <th>Tipo</th>
-                  <th>Valor</th>
+                  {isColVisible('date') && <th>Data</th>}
+                  {isColVisible('description') && <th>Descrição</th>}
+                  {isColVisible('bank') && <th>Banco</th>}
+                  {isColVisible('type') && <th>Tipo</th>}
+                  {isColVisible('amount') && <th>Valor</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={visibleColumns.financial.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma transação encontrada.</td></tr>
+                  <tr><td colSpan={visibleColumns.financial.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma transação encontrada.</td></tr>
                 ) : data.map(t => (
                   <tr key={t.id}>
-                    <td>{new Date(t.createdAt).toLocaleDateString()}</td>
-                    <td>{t.description}</td>
-                    <td>{t.bank?.name || '---'}</td>
-                    <td>{t.type === 'INCOME' ? 'Receita' : 'Despesa'}</td>
-                    <td style={{ fontWeight: 'bold', color: t.type === 'INCOME' ? 'var(--success)' : 'var(--error)' }}>
-                      {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
-                    </td>
+                    {isColVisible('date') && <td>{new Date(t.createdAt).toLocaleDateString()}</td>}
+                    {isColVisible('description') && <td>{t.description}</td>}
+                    {isColVisible('bank') && <td>{t.bank?.name || '---'}</td>}
+                    {isColVisible('type') && <td>{t.type === 'INCOME' ? 'Receita' : 'Despesa'}</td>}
+                    {isColVisible('amount') && (
+                      <td style={{ fontWeight: 'bold', color: t.type === 'INCOME' ? 'var(--success)' : 'var(--error)' }}>
+                        {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
