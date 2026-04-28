@@ -361,10 +361,9 @@ export default function FinanceiroPage() {
           </div>
         </div>
       )}
-        </div>
-      )}
 
       {/* Modal de Importação */}
+
       {isImportModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal} style={{ maxWidth: '800px' }}>
