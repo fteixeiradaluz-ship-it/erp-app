@@ -17,6 +17,7 @@ export async function getDashboardStats() {
     // 1. Total Sales and Revenue (Last 30 Days)
     const sales = await prisma.sale.findMany({
       where: {
+        deletedAt: null,
         createdAt: { gte: thirtyDaysAgo }
       },
       include: {
@@ -39,7 +40,7 @@ export async function getDashboardStats() {
 
     // 2. Pending Financial (CARTAO sales not yet paid)
     const pendingTransactions = await prisma.transaction.aggregate({
-      where: { status: 'PENDING', type: 'INCOME' },
+      where: { status: 'PENDING', type: 'INCOME', deletedAt: null },
       _sum: { amount: true }
     })
 
@@ -51,6 +52,7 @@ export async function getDashboardStats() {
       where: { 
          status: 'PENDING', 
          type: 'EXPENSE',
+         deletedAt: null,
          dueDate: { lte: thirtyDaysFromNow } 
       },
       _sum: { amount: true }
@@ -110,6 +112,7 @@ export async function getFinancialFlow() {
 
   try {
     const transactions = await prisma.transaction.findMany({
+      where: { deletedAt: null },
       include: { bank: true },
       orderBy: { createdAt: 'desc' },
       take: 50
@@ -202,6 +205,7 @@ export async function createManualTransaction(data: {
 }
 
 export async function createPayableInstallments(data: {
+    id?: string,
     bankId: string,
     amount: number,
     description: string,
@@ -210,6 +214,24 @@ export async function createPayableInstallments(data: {
 }) {
     const session = await getSession()
     if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+
+    if (data.id) {
+        try {
+            await prisma.transaction.update({
+                where: { id: data.id },
+                data: {
+                    bankId: data.bankId,
+                    amount: data.amount,
+                    description: data.description,
+                    dueDate: data.firstDueDate
+                }
+            })
+            revalidatePath('/contas-pagar')
+            return { success: true }
+        } catch (e) {
+            return { error: 'Erro ao editar conta' }
+        }
+    }
 
     if (data.installments < 1) return { error: 'Número de parcelas inválido' }
 
@@ -301,6 +323,7 @@ export async function getPendingPayables() {
             where: {
                 type: 'EXPENSE',
                 status: 'PENDING',
+                deletedAt: null,
                 dueDate: { not: null }
             },
             include: { bank: true },
@@ -324,6 +347,7 @@ export async function getPendingReceivables() {
             where: {
                 type: 'INCOME',
                 status: 'PENDING',
+                deletedAt: null,
                 dueDate: { not: null }
             },
             include: { bank: true },
@@ -358,7 +382,26 @@ export async function deleteTransaction(id: string, reason: string) {
                 })
             }
 
-            await tx.transaction.delete({ where: { id } })
+            await tx.transaction.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            })
+
+            // If there's an associated Sale, soft-delete it too
+            // We search by description since we don't have a direct relation in schema
+            // Usually descriptions are like "Venda #xxxxxx"
+            if (transaction.description.startsWith('Venda #')) {
+                const saleIdPart = transaction.description.split('#')[1].split(' ')[0]
+                const sale = await tx.sale.findFirst({
+                    where: { id: { startsWith: saleIdPart } }
+                })
+                if (sale) {
+                    await tx.sale.update({
+                        where: { id: sale.id },
+                        data: { deletedAt: new Date() }
+                    })
+                }
+            }
         })
 
         await createAuditLog(session.userId, 'DELETE_TRANSACTION', 'Transaction', { id, reason })

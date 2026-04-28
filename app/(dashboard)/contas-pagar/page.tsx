@@ -14,6 +14,7 @@ export default function ContasAPagarPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overdue' | 'upcoming' | 'future'>('upcoming')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingPayable, setEditingPayable] = useState<any>(null)
 
   // Form State
   const [form, setForm] = useState({
@@ -44,6 +45,7 @@ export default function ContasAPagarPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const res = await createPayableInstallments({
+      id: editingPayable?.id,
       description: form.description,
       amount: parseFloat(form.amount),
       bankId: form.bankId,
@@ -53,6 +55,7 @@ export default function ContasAPagarPage() {
 
     if (res.success) {
       setIsModalOpen(false)
+      setEditingPayable(null)
       load()
       setForm({ description: '', amount: '', bankId: banks[0]?.id || '', installments: '1', firstDueDate: '' })
     } else {
@@ -103,7 +106,11 @@ export default function ContasAPagarPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <h1>💸 Contas a Pagar</h1>
-        <Button onClick={() => setIsModalOpen(true)}>+ Novo Lançamento</Button>
+        <Button onClick={() => {
+          setEditingPayable(null)
+          setForm({ description: '', amount: '', bankId: banks[0]?.id || '', installments: '1', firstDueDate: '' })
+          setIsModalOpen(true)
+        }}>+ Novo Lançamento</Button>
       </header>
 
       <div className={styles.tabs}>
@@ -153,7 +160,20 @@ export default function ContasAPagarPage() {
                     <td style={{ color: 'var(--gold-primary)', fontWeight: 'bold' }}>{formatCurrency(t.amount)}</td>
                     <td>{t.bank.name}</td>
                     <td>
-                      <Button variant="secondary" onClick={() => handlePay(t.id)}>✅ Pagar</Button>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <Button variant="secondary" onClick={() => {
+                          setEditingPayable(t)
+                          setForm({
+                            description: t.description,
+                            amount: t.amount.toString(),
+                            bankId: t.bankId,
+                            installments: '1',
+                            firstDueDate: new Date(t.dueDate).toISOString().split('T')[0]
+                          })
+                          setIsModalOpen(true)
+                        }}>✏️</Button>
+                        <Button variant="secondary" onClick={() => handlePay(t.id)}>✅ Pagar</Button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -168,7 +188,7 @@ export default function ContasAPagarPage() {
           <div className={styles.modal}>
             <Card>
               <div className={styles.modalContent}>
-                <h2>Lançar Contas a Pagar</h2>
+                <h2>{editingPayable ? 'Editar Conta' : 'Lançar Contas a Pagar'}</h2>
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <Input 
                     label="Descrição (Ex: Luz, Internet)" 
@@ -191,6 +211,7 @@ export default function ContasAPagarPage() {
                        <select 
                          style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
                          value={form.installments}
+                         disabled={!!editingPayable}
                          onChange={(e) => setForm({...form, installments: e.target.value})}
                        >
                          {Array.from({ length: 24 }).map((_, i) => (

@@ -113,13 +113,13 @@ export default function UsuariosPage() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Nome / Cargo</th>
-              <th>Contato (E-mail/Tel)</th>
+              <th>Funcante / Cargo</th>
+              <th>Contato</th>
               <th>CPF</th>
               <th>Perfil</th>
-              <th>Salário</th>
+              <th>Salário Base</th>
               <th>Admissão</th>
-              <th style={{ textAlign: 'right' }}>Ações</th>
+              <th style={{ textAlign: 'right' }}>Gerenciamento</th>
             </tr>
           </thead>
           <tbody>
@@ -127,27 +127,27 @@ export default function UsuariosPage() {
               <tr key={u.id}>
                 <td>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: '600' }}>{u.name}</span>
-                    <span style={{ fontSize: '0.8rem', color: '#666' }}>{u.position || 'N/A'}</span>
+                    <span style={{ fontWeight: '700', color: 'var(--gold-primary)' }}>{u.name}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{u.position || '---'}</span>
                   </div>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.9rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem' }}>
                     <span>{u.email}</span>
-                    <span style={{ color: '#666' }}>{u.phone || '-'}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>{u.phone || '---'}</span>
                   </div>
                 </td>
-                <td>{u.cpf || '-'}</td>
+                <td style={{ fontSize: '0.85rem', color: '#666' }}>{u.cpf || '---'}</td>
                 <td>
                   <span className={`${styles.roleBadge} ${u.role === 'ADMIN' ? styles.roleAdmin : (u.role === 'SECRETARY' ? styles.roleSecretary : styles.roleSeller)}`}>
-                    {u.role === 'ADMIN' ? 'ADMIN' : (u.role === 'SECRETARY' ? 'SECRETARIA' : 'VENDEDOR')}
+                    {u.role === 'ADMIN' ? '🛡️ ADMIN' : (u.role === 'SECRETARY' ? '📋 SECRETARIA' : '👤 VENDEDOR')}
                   </span>
                 </td>
-                <td>{u.salary ? `R$ ${u.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}</td>
-                <td>{u.admissionDate ? new Date(u.admissionDate).toLocaleDateString() : '-'}</td>
+                <td style={{ fontWeight: '600' }}>{u.salary ? `R$ ${u.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '---'}</td>
+                <td style={{ fontSize: '0.85rem' }}>{u.admissionDate ? new Date(u.admissionDate).toLocaleDateString() : '---'}</td>
                 <td className={styles.actions}>
-                  <Button variant="secondary" onClick={() => handleOpenModal(u)}>Editar</Button>
-                  <Button variant="danger" onClick={() => handleDelete(u.id)}>Excluir</Button>
+                  <Button variant="secondary" onClick={() => handleOpenModal(u)}>✏️ Editar</Button>
+                  <Button variant="danger" onClick={() => handleDelete(u.id)}>🗑️</Button>
                 </td>
               </tr>
             ))}
@@ -224,7 +224,7 @@ export default function UsuariosPage() {
                     />
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', color: '#666' }}>Perfil de Acesso</label>
+                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Perfil de Acesso</label>
                       <select 
                         className={styles.select}
                         value={formData.role}

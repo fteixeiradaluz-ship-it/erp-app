@@ -111,12 +111,13 @@ export default function EstoquePage() {
       <div className={styles.header}>
         <h1>📦 Gestão de Estoque</h1>
         <div className={styles.controls}>
-          <div className={styles.searchWrapper}>
+          <div className={styles.searchWrapper} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
             <Input 
               placeholder="Buscar produto..." 
               value={search} 
               onChange={handleSearch}
             />
+            <Button variant="secondary" onClick={() => loadData(search)}>🔍 Buscar</Button>
           </div>
           <label className={styles.filterToggle}>
             <input 

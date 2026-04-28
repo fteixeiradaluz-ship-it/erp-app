@@ -114,10 +114,13 @@ export async function bulkImportTransactions(data: { bankId: string, transaction
     if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
 
     try {
+        let totalModifier = 0;
+        
         await prisma.$transaction(async (tx) => {
             for (const item of data.transactions) {
                 const type = item.amount > 0 ? 'INCOME' : 'EXPENSE'
                 const amount = Math.abs(item.amount)
+                totalModifier += item.amount // Sum original values (income is +, expense is -)
 
                 await tx.transaction.create({
                     data: {
@@ -127,21 +130,23 @@ export async function bulkImportTransactions(data: { bankId: string, transaction
                         description: item.description,
                         status: 'PAID',
                         payDate: new Date(item.date),
-                        createdAt: new Date(item.date) // Set createdAt to match transaction date
+                        createdAt: new Date(item.date)
                     }
                 })
-
-                const modifier = type === 'INCOME' ? 1 : -1
-                await tx.bank.update({
-                    where: { id: data.bankId },
-                    data: { balance: { increment: amount * modifier } }
-                })
             }
+
+            await tx.bank.update({
+                where: { id: data.bankId },
+                data: { balance: { increment: totalModifier } }
+            })
+        }, {
+            timeout: 20000 // 20 seconds timeout for bulk operations
         })
 
         revalidatePath('/financeiro')
         return { success: true }
     } catch (err: any) {
+        console.error('Import Error:', err)
         return { error: 'Erro ao importar transações: ' + err.message }
     }
 }

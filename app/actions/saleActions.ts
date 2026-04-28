@@ -100,10 +100,71 @@ export async function getPOSData() {
   const session = await getSession();
   if (!session) return { customers: [], products: [] };
 
-  const customers = await prisma.customer.findMany({ select: { id: true, name: true }});
+  const customers = await prisma.customer.findMany({ 
+    where: { deletedAt: null },
+    select: { id: true, name: true }
+  });
   const products = await prisma.product.findMany({ 
     where: { deletedAt: null },
     select: { id: true, name: true, price: true, stock: true }
   });
   return { customers, products };
+}
+
+export async function deleteSale(id: string, reason: string) {
+  const session = await getSession();
+  if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' };
+  if (!reason) return { error: 'A justificativa é obrigatória' };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({ 
+        where: { id },
+        include: { items: true } 
+      });
+      if (!sale) throw new Error('Venda não encontrada');
+      if (sale.deletedAt) throw new Error('Venda já está excluída');
+
+      // 1. Soft-delete the sale
+      await tx.sale.update({
+        where: { id },
+        data: { deletedAt: new Date() }
+      });
+
+      // 2. Revert stock
+      for (const item of sale.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } }
+        });
+      }
+
+      // 3. Find and soft-delete associated transaction
+      const transaction = await tx.transaction.findFirst({
+        where: { description: { startsWith: `Venda #${sale.id.slice(0, 6)}` } }
+      });
+
+      if (transaction) {
+        // Revert bank balance if PAID
+        if (transaction.status === 'PAID') {
+          await tx.bank.update({
+            where: { id: transaction.bankId },
+            data: { balance: { decrement: transaction.amount } }
+          });
+        }
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: { deletedAt: new Date() }
+        });
+      }
+    });
+
+    // Audit Log
+    const { createAuditLog } = await import('@/lib/audit');
+    await createAuditLog(session.userId, 'DELETE_SALE', 'Sale', { id, reason });
+
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || 'Erro ao excluir venda' };
+  }
 }

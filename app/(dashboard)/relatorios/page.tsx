@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatCurrency } from '@/lib/format'
 
-type TabType = 'sales' | 'inventory' | 'financial' | 'appointments'
+type TabType = 'sales' | 'inventory' | 'financial' | 'appointments' | 'shipping'
 
 export default function RelatoriosPage() {
   const [role, setRole] = useState<string>('')
@@ -23,7 +23,6 @@ export default function RelatoriosPage() {
   const [endDate, setEndDate] = useState('')
   const [sellerFilter, setSellerFilter] = useState('')
 
-  // Detecta o role do usuário na primeira carga (getSalesReport retorna role)
   useEffect(() => {
     async function detectRole() {
       const res = await getSalesReport()
@@ -52,12 +51,17 @@ export default function RelatoriosPage() {
     else if (activeTab === 'inventory') res = await getInventoryReport()
     else if (activeTab === 'financial') res = await getFinancialReport(startDate, endDate)
     else if (activeTab === 'appointments') res = await getAppointmentsReport(startDate, endDate)
+    else if (activeTab === 'shipping') {
+      const { getShippingReport } = await import('@/app/actions/reportActions')
+      res = await getShippingReport(startDate, endDate)
+    }
 
     if (res?.success) {
       if (activeTab === 'sales') setData(res.sales)
       else if (activeTab === 'inventory') setData(res.products)
       else if (activeTab === 'financial') setData(res.transactions)
       else if (activeTab === 'appointments') setData(res.appointments)
+      else if (activeTab === 'shipping') setData(res.shipments)
     } else {
       setData([])
     }
@@ -93,6 +97,11 @@ export default function RelatoriosPage() {
         const dt = new Date(a.date)
         csvContent += `${dt.toLocaleDateString()},${dt.toLocaleTimeString()},${a.customer.name},${a.customer.phone || '---'},${a.status},${a.isReturn ? 'Sim' : 'Não'}\n`
       })
+    } else if (activeTab === 'shipping') {
+      csvContent += 'Data,Cliente,Telefone,Vendedor,NF,Etiqueta\n'
+      data.forEach((s: any) => {
+        csvContent += `${new Date(s.createdAt).toLocaleDateString()},${s.customer.name},${s.customer.phone || '---'},${s.user.name},${s.nfGenerated ? 'Sim' : 'Não'},${s.labelGenerated ? 'Sim' : 'Não'}\n`
+      })
     }
 
     const link = document.createElement('a')
@@ -105,12 +114,12 @@ export default function RelatoriosPage() {
 
   const isAdmin = role === 'ADMIN'
   const isSecretary = role === 'SECRETARY'
+  const isSeller = role === 'SELLER'
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <h1>📊 Central de Relatórios</h1>
-        {/* Badge do perfil */}
         {role && (
           <span style={{
             fontSize: '0.75rem',
@@ -126,7 +135,6 @@ export default function RelatoriosPage() {
         )}
       </header>
 
-      {/* Abas disponíveis por perfil */}
       <div className={styles.tabs}>
         <div
           className={`${styles.tab} ${activeTab === 'sales' ? styles.activeTab : ''}`}
@@ -134,6 +142,15 @@ export default function RelatoriosPage() {
         >
           🛒 {isAdmin ? 'Vendas (Todos)' : 'Minhas Vendas'}
         </div>
+
+        {(isAdmin || isSeller) && (
+          <div
+            className={`${styles.tab} ${activeTab === 'shipping' ? styles.activeTab : ''}`}
+            onClick={() => setActiveTab('shipping')}
+          >
+            📦 Envios Finalizados
+          </div>
+        )}
 
         {(isAdmin || isSecretary) && (
           <div
@@ -179,7 +196,6 @@ export default function RelatoriosPage() {
           onChange={(e) => setEndDate(e.target.value)}
         />
 
-        {/* Filtro por vendedor: só para ADMIN na aba de vendas */}
         {activeTab === 'sales' && isAdmin && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Filtrar por Vendedor</label>
@@ -204,8 +220,6 @@ export default function RelatoriosPage() {
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
-
-          {/* === ABA: VENDAS === */}
           {activeTab === 'sales' && (
             <>
               <thead>
@@ -222,6 +236,8 @@ export default function RelatoriosPage() {
               <tbody>
                 {loading ? (
                   <tr><td colSpan={isAdmin ? 7 : 5} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                ) : data.length === 0 ? (
+                  <tr><td colSpan={isAdmin ? 7 : 5} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
                 ) : data.filter(s => sellerFilter ? s.user.name === sellerFilter : true).map(s => {
                   const comm = s.user.commissionPercent !== null ? s.user.commissionPercent : globalCommission
                   const commVal = s.totalAmount * (comm / 100)
@@ -240,10 +256,9 @@ export default function RelatoriosPage() {
                   )
                 })}
 
-                {/* Total de comissão acumulada */}
                 {!loading && data.length > 0 && (
                   <tr style={{ background: 'rgba(212,175,55,0.08)', fontWeight: 'bold' }}>
-                    <td colSpan={isAdmin ? (sellerFilter ? 5 : 5) : 4} style={{ textAlign: 'right', color: '#aaa' }}>
+                    <td colSpan={isAdmin ? 5 : 4} style={{ textAlign: 'right', color: '#aaa' }}>
                       {sellerFilter ? `Total comissão de ${sellerFilter}:` : 'Total das minhas comissões:'}
                     </td>
                     <td style={{ color: 'var(--success)', fontSize: '1.05rem' }}>
@@ -263,7 +278,41 @@ export default function RelatoriosPage() {
             </>
           )}
 
-          {/* === ABA: CONSULTAS (ADMIN e SECRETARY) === */}
+          {activeTab === 'shipping' && (
+            <>
+              <thead>
+                <tr>
+                  <th>Data Venda</th>
+                  <th>Cliente</th>
+                  <th>Telefone</th>
+                  <th>Vendedor</th>
+                  <th>Status Documentação</th>
+                  <th>Status Envio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                ) : data.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum envio finalizado encontrado.</td></tr>
+                ) : data.map(s => (
+                  <tr key={s.id}>
+                    <td>{new Date(s.createdAt).toLocaleDateString()}</td>
+                    <td style={{ fontWeight: '600' }}>{s.customer.name}</td>
+                    <td>{s.customer.phone || '---'}</td>
+                    <td>{s.user.name}</td>
+                    <td>
+                      <span style={{ fontSize: '0.8rem' }}>
+                        {s.nfGenerated ? '✅ NF' : '❌ NF'} | {s.labelGenerated ? '✅ Etiqueta' : '❌ Etiqueta'}
+                      </span>
+                    </td>
+                    <td><span style={{ color: 'var(--success)', fontWeight: 'bold' }}>🚚 ENVIADO</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </>
+          )}
+
           {activeTab === 'appointments' && (
             <>
               <thead>
@@ -296,18 +345,10 @@ export default function RelatoriosPage() {
                     </tr>
                   )
                 })}
-
-                {!loading && data.length > 0 && (
-                  <tr style={{ background: 'rgba(212,175,55,0.08)', fontWeight: 'bold' }}>
-                    <td colSpan={4} style={{ textAlign: 'right', color: '#aaa' }}>Total de consultas:</td>
-                    <td colSpan={2} style={{ color: 'var(--gold-primary)' }}>{data.length}</td>
-                  </tr>
-                )}
               </tbody>
             </>
           )}
 
-          {/* === ABA: ESTOQUE (apenas ADMIN) === */}
           {activeTab === 'inventory' && (
             <>
               <thead>
@@ -329,15 +370,14 @@ export default function RelatoriosPage() {
                     <td>{formatCurrency(p.cost)}</td>
                     <td>{formatCurrency(p.price)}</td>
                     <td style={{ fontWeight: 'bold', color: p.stock <= 5 ? 'var(--error)' : 'inherit' }}>
-                        {p.stock <= 5 ? `⚠️ ${p.stock}` : p.stock}
-                      </td>
+                      {p.stock <= 5 ? `⚠️ ${p.stock}` : p.stock}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </>
           )}
 
-          {/* === ABA: FINANCEIRO (apenas ADMIN) === */}
           {activeTab === 'financial' && (
             <>
               <thead>
@@ -352,6 +392,8 @@ export default function RelatoriosPage() {
               <tbody>
                 {loading ? (
                   <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                ) : data.length === 0 ? (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma transação encontrada.</td></tr>
                 ) : data.map(t => (
                   <tr key={t.id}>
                     <td>{new Date(t.createdAt).toLocaleDateString()}</td>

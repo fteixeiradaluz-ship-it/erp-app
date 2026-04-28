@@ -125,6 +125,7 @@ export default function ClientesPage() {
               value={search} 
               onChange={handleSearch}
             />
+            <Button variant="secondary" onClick={() => loadCustomers(search)}>🔍 Buscar</Button>
           </div>
           <Button onClick={() => openModal()}>+ Novo Cliente</Button>
         </div>

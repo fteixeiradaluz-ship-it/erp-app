@@ -231,3 +231,11 @@
     align-items: flex-start;
   }
 }
+
+.expenseRow {
+  background-color: rgba(211, 47, 47, 0.03);
+}
+
+.expenseRow:hover {
+  background-color: rgba(211, 47, 47, 0.06);
+}

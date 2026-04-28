@@ -27,8 +27,11 @@
 }
 
 .searchWrapper {
-  flex: 1;
-  min-width: 250px;
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
 }
 
 .tableWrapper {

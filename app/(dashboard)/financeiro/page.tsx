@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatCurrency } from '@/lib/format'
 import { parseBankStatement, bulkImportTransactions } from '@/app/actions/bankImportActions'
+import { getAuditLogs } from '@/app/actions/auditActions'
 
 export default function FinanceiroPage() {
   const [data, setData] = useState<any>(null)
@@ -35,6 +36,8 @@ export default function FinanceiroPage() {
   const [justification, setJustification] = useState('')
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false)
+  const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [importPreview, setImportPreview] = useState<any[]>([])
   const [importing, setImporting] = useState(false)
 
@@ -149,6 +152,13 @@ export default function FinanceiroPage() {
       <header className={styles.formHeader}>
         <h1>💰 Gestão Financeira</h1>
         <div style={{ display: 'flex', gap: '1rem' }}>
+          <Button variant="secondary" onClick={async () => {
+            const res = await getAuditLogs()
+            if (res.success) {
+              setAuditLogs(res.logs)
+              setIsLogModalOpen(true)
+            }
+          }}>📜 Ver Histórico</Button>
           <label className={`${styles.actionBtn} ${styles.importBtn}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>
             📥 Importar Extrato
             <input type="file" hidden accept=".ofx,.csv" onChange={handleImportFile} />
@@ -194,7 +204,7 @@ export default function FinanceiroPage() {
                 {transactions.length === 0 ? (
                   <tr><td colSpan={5} style={{ textAlign: 'center' }}>Nenhuma transação encontrada.</td></tr>
                 ) : transactions.map((t: any) => (
-                  <tr key={t.id}>
+                  <tr key={t.id} className={t.type === 'EXPENSE' ? styles.expenseRow : ''}>
                     <td style={{ whiteSpace: 'nowrap' }}>{new Date(t.createdAt).toLocaleDateString()}</td>
                     <td>{t.description}</td>
                     <td>{t.bank.name}</td>
@@ -431,6 +441,59 @@ export default function FinanceiroPage() {
                   >
                     {importing ? 'Importando...' : `Importar ${importPreview.filter(p => p.selected !== false).length} Transações`}
                   </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+      {/* Modal de Logs de Auditoria */}
+      {isLogModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal} style={{ maxWidth: '900px' }}>
+            <Card>
+              <div className={styles.modalContent}>
+                <h2>📜 Histórico de Alterações e Auditoria</h2>
+                <p>Registros de modificações críticas no sistema financeiro.</p>
+                
+                <div className={styles.tableWrapper} style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>Justificativa / Detalhes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditLogs.length === 0 ? (
+                        <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum log encontrado.</td></tr>
+                      ) : (
+                        auditLogs.map((log, idx) => (
+                          <tr key={idx}>
+                            <td style={{ fontSize: '0.85rem' }}>{new Date(log.createdAt).toLocaleString()}</td>
+                            <td style={{ fontWeight: '600' }}>{log.user.name}</td>
+                            <td>
+                              <span className={styles.statsBadge} style={{ 
+                                backgroundColor: log.action.includes('DELETE') ? 'var(--error)' : 'var(--gold-primary)',
+                                color: '#fff'
+                              }}>
+                                {log.action}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                              {log.details?.justification || JSON.stringify(log.details)}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <Button variant="secondary" onClick={() => setIsLogModalOpen(false)}>Fechar</Button>
                 </div>
               </div>
             </Card>

@@ -37,9 +37,9 @@ export default function Sidebar({ role, logo, companyName, isOpen, onClose }: { 
       {isOpen && <div className={styles.overlay} onClick={onClose}></div>}
       <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
         <div className={styles.sidebarHeader}>
-          <div className={styles.logo}>
+          <div className={styles.logoWrapper}>
             {logo ? (
-              <img src={logo} alt="Logo" className={styles.logoImg} style={{ maxHeight: '40px', maxWidth: '100%', objectFit: 'contain' }} />
+              <img src={logo} alt="Logo" className={styles.logoImg} />
             ) : (
               <span className={styles.companyNameText}>{companyName}</span>
             )}

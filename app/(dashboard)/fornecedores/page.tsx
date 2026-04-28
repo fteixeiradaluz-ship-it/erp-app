@@ -108,13 +108,16 @@ export default function FornecedoresPage() {
         <Button onClick={() => handleOpenModal()}>+ Novo Fornecedor</Button>
       </header>
 
-      <Card className={styles.controls}>
-        <Input 
-          placeholder="Buscar por nome ou CNPJ..." 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </Card>
+      <div className={styles.controls}>
+        <div className={styles.searchWrapper}>
+          <Input 
+            placeholder="Buscar por nome ou CNPJ..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Button variant="secondary" onClick={() => load()}>🔍 Buscar</Button>
+        </div>
+      </div>
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
@@ -208,7 +211,7 @@ export default function FornecedoresPage() {
                   </div>
                 ) : (
                   <div className={styles.restockList}>
-                    <p style={{ marginBottom: '1rem', color: '#888' }}>
+                    <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
                       Os seguintes produtos estão abaixo do limite de segurança (10 unidades):
                     </p>
                     <table className={styles.table}>
@@ -225,7 +228,7 @@ export default function FornecedoresPage() {
                             <td>{item.name}</td>
                             <td>{item.stock}</td>
                             <td>
-                              <span style={{ color: item.stock <= 5 ? '#ff5252' : '#ff9800', fontWeight: '600' }}>
+                              <span style={{ color: item.stock <= 5 ? 'var(--error)' : 'var(--warning)', fontWeight: '600' }}>
                                 {item.stock <= 5 ? 'CRÍTICO' : 'BAIXO'}
                               </span>
                             </td>

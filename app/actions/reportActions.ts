@@ -12,16 +12,16 @@ export async function getSalesReport(startDate?: string, endDate?: string) {
   const session = await getSession()
   if (!session) return { error: 'Não autorizado' }
 
-  // Restringe a vendas do próprio usuário para SELLER e SECRETARY
   const userFilter = session.role === 'ADMIN' ? undefined : { userId: session.userId }
 
   try {
     const sales = await prisma.sale.findMany({
       where: {
         ...userFilter,
+        deletedAt: null,
         createdAt: {
-          gte: startDate ? new Date(startDate) : undefined,
-          lte: endDate ? new Date(endDate) : undefined,
+          gte: startDate && startDate !== "" ? new Date(startDate) : undefined,
+          lte: endDate && endDate !== "" ? new Date(endDate) : undefined,
         }
       },
       include: {
@@ -66,9 +66,10 @@ export async function getFinancialReport(startDate?: string, endDate?: string) {
   try {
     const transactions = await prisma.transaction.findMany({
       where: {
+        deletedAt: null,
         createdAt: {
-          gte: startDate ? new Date(startDate) : undefined,
-          lte: endDate ? new Date(endDate) : undefined,
+          gte: startDate && startDate !== "" ? new Date(startDate) : undefined,
+          lte: endDate && endDate !== "" ? new Date(endDate) : undefined,
         }
       },
       include: { bank: { select: { name: true } } },
@@ -76,7 +77,39 @@ export async function getFinancialReport(startDate?: string, endDate?: string) {
     })
     return { success: true, transactions }
   } catch (err: any) {
+    console.error('Financial Report Error:', err)
     return { error: 'Erro ao gerar relatório financeiro' }
+  }
+}
+
+/**
+ * Relatório de Envios Finalizados — ADMIN e SELLER.
+ */
+export async function getShippingReport(startDate?: string, endDate?: string) {
+  const session = await getSession()
+  if (!session || (session.role !== 'ADMIN' && session.role !== 'SELLER')) {
+    return { error: 'Não autorizado' }
+  }
+
+  try {
+    const shipments = await prisma.sale.findMany({
+      where: {
+        deletedAt: null,
+        isSent: true,
+        createdAt: {
+          gte: startDate && startDate !== "" ? new Date(startDate) : undefined,
+          lte: endDate && endDate !== "" ? new Date(endDate) : undefined,
+        }
+      },
+      include: {
+        customer: { select: { name: true, phone: true } },
+        user: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+    return { success: true, shipments }
+  } catch (err: any) {
+    return { error: 'Erro ao gerar relatório de envios' }
   }
 }
 
@@ -93,8 +126,8 @@ export async function getAppointmentsReport(startDate?: string, endDate?: string
     const appointments = await prisma.appointment.findMany({
       where: {
         date: {
-          gte: startDate ? new Date(startDate) : undefined,
-          lte: endDate ? new Date(endDate) : undefined,
+          gte: startDate && startDate !== "" ? new Date(startDate) : undefined,
+          lte: endDate && endDate !== "" ? new Date(endDate) : undefined,
         }
       },
       include: {
