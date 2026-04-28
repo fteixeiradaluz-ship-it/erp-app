@@ -128,7 +128,10 @@ export async function deleteSale(id: string, reason: string) {
       // 1. Soft-delete the sale
       await tx.sale.update({
         where: { id },
-        data: { deletedAt: new Date() }
+        data: { 
+          deletedAt: new Date(),
+          deletionJustification: reason
+        }
       });
 
       // 2. Revert stock
@@ -154,7 +157,10 @@ export async function deleteSale(id: string, reason: string) {
         }
         await tx.transaction.update({
           where: { id: transaction.id },
-          data: { deletedAt: new Date() }
+          data: { 
+            deletedAt: new Date(),
+            deletionJustification: `Venda excluída: ${reason}`
+          }
         });
       }
     });

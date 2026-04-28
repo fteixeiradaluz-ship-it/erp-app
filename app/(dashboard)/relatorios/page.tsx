@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import styles from './relatorios.module.css'
 import { getSalesReport, getInventoryReport, getFinancialReport, getAppointmentsReport } from '@/app/actions/reportActions'
 import { getSettings } from '@/app/actions/settingsActions'
+import { deleteSale } from '@/app/actions/saleActions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -22,6 +23,13 @@ export default function RelatoriosPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [sellerFilter, setSellerFilter] = useState('')
+
+  // Deletion state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showJustificationModal, setShowJustificationModal] = useState(false)
+  const [selectedSale, setSelectedSale] = useState<any>(null)
+  const [justification, setJustification] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     async function detectRole() {
@@ -63,9 +71,26 @@ export default function RelatoriosPage() {
       else if (activeTab === 'appointments') setData(res.appointments)
       else if (activeTab === 'shipping') setData(res.shipments)
     } else {
+      console.error("Load error:", res?.error)
       setData([])
+      if (res?.error) alert(`Erro ao carregar dados: ${res.error}`)
     }
     setLoading(false)
+  }
+
+  async function handleDeleteSale() {
+    if (!justification) return alert('Por favor, informe a justificativa.')
+    setIsDeleting(true)
+    const res = await deleteSale(selectedSale.id, justification)
+    if (res.success) {
+      alert('Venda excluída com sucesso.')
+      setShowDeleteModal(false)
+      setJustification('')
+      load()
+    } else {
+      alert(res.error || 'Erro ao excluir venda.')
+    }
+    setIsDeleting(false)
   }
 
   const exportCSV = () => {
@@ -228,30 +253,57 @@ export default function RelatoriosPage() {
                   <th>Cliente</th>
                   <th>Itens Comprados</th>
                   {isAdmin && <th>Vendedor</th>}
-                  <th>Método</th>
+                   <th>Método</th>
                   <th>Minha Comissão</th>
                   {isAdmin && <th>Total Venda</th>}
+                  {isAdmin && <th style={{ textAlign: 'center' }}>Ações</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={isAdmin ? 7 : 5} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={isAdmin ? 8 : 5} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={isAdmin ? 7 : 5} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
+                  <tr><td colSpan={isAdmin ? 8 : 5} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
                 ) : data.filter(s => sellerFilter ? s.user.name === sellerFilter : true).map(s => {
                   const comm = s.user.commissionPercent !== null ? s.user.commissionPercent : globalCommission
                   const commVal = s.totalAmount * (comm / 100)
+                  const isVoided = !!s.deletedAt
+
                   return (
-                    <tr key={s.id}>
+                    <tr key={s.id} className={isVoided ? styles.voidedRow : ''}>
                       <td>{new Date(s.createdAt).toLocaleDateString()}</td>
-                      <td>{s.customer.name}</td>
+                      <td>
+                        {s.customer.name}
+                        {isVoided && <div style={{ fontSize: '0.7rem', color: '#ef4444', textDecoration: 'none' }}>ANULADA</div>}
+                      </td>
                       <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
                         {s.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(', ')}
                       </td>
                       {isAdmin && <td>{s.user.name} <span style={{ fontSize: '0.7em', color: '#888' }}>({comm}%)</span></td>}
                       <td>{s.paymentMethod}</td>
-                      <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>{formatCurrency(commVal)}</td>
-                      {isAdmin && <td style={{ fontWeight: 'bold', color: 'var(--gold-primary)' }}>{formatCurrency(s.totalAmount)}</td>}
+                      <td style={{ color: isVoided ? '#999' : 'var(--success)', fontWeight: 'bold' }}>{formatCurrency(commVal)}</td>
+                      {isAdmin && <td style={{ fontWeight: 'bold', color: isVoided ? '#999' : 'var(--gold-primary)' }}>{formatCurrency(s.totalAmount)}</td>}
+                      {isAdmin && (
+                        <td className={styles.actionsCell} style={{ textAlign: 'center' }}>
+                          {!isVoided ? (
+                            <button 
+                              className={`${styles.actionBtn} ${styles.deleteBtn}`} 
+                              title="Excluir Venda"
+                              onClick={() => { setSelectedSale(s); setShowDeleteModal(true) }}
+                            >
+                              🗑️
+                            </button>
+                          ) : (
+                            <button 
+                              className={`${styles.actionBtn} ${styles.viewBtn}`} 
+                              title="Ver Justificativa"
+                              onClick={() => { setSelectedSale(s); setShowJustificationModal(true) }}
+                            >
+                              👁️
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
@@ -264,14 +316,14 @@ export default function RelatoriosPage() {
                     <td style={{ color: 'var(--success)', fontSize: '1.05rem' }}>
                       {formatCurrency(
                         data
-                          .filter(s => sellerFilter ? s.user.name === sellerFilter : true)
+                          .filter(s => (sellerFilter ? s.user.name === sellerFilter : true) && !s.deletedAt)
                           .reduce((acc, s) => {
                             const comm = s.user.commissionPercent !== null ? s.user.commissionPercent : globalCommission
                             return acc + s.totalAmount * (comm / 100)
                           }, 0)
                       )}
                     </td>
-                    {isAdmin && <td></td>}
+                    {isAdmin && <td colSpan={2}></td>}
                   </tr>
                 )}
               </tbody>
@@ -398,7 +450,7 @@ export default function RelatoriosPage() {
                   <tr key={t.id}>
                     <td>{new Date(t.createdAt).toLocaleDateString()}</td>
                     <td>{t.description}</td>
-                    <td>{t.bank.name}</td>
+                    <td>{t.bank?.name || '---'}</td>
                     <td>{t.type === 'INCOME' ? 'Receita' : 'Despesa'}</td>
                     <td style={{ fontWeight: 'bold', color: t.type === 'INCOME' ? 'var(--success)' : 'var(--error)' }}>
                       {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
@@ -410,6 +462,53 @@ export default function RelatoriosPage() {
           )}
         </table>
       </div>
+
+      {showDeleteModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <h3>⚠️ Confirmar Exclusão</h3>
+            <p style={{ marginBottom: '1rem', fontSize: '0.9rem' }}>
+              Você está prestes a excluir a venda de <strong>{selectedSale?.customer.name}</strong> no valor de <strong>{formatCurrency(selectedSale?.totalAmount)}</strong>.
+              <br/><br/>
+              <strong>Esta ação irá:</strong>
+              <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
+                <li>Estornar o saldo no banco (se aplicável)</li>
+                <li>Devolver os itens ao estoque</li>
+                <li>Marcar a venda como anulada</li>
+              </ul>
+            </p>
+            <Input 
+              label="Justificativa (Obrigatório)"
+              placeholder="Ex: Cliente desistiu da compra"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+            />
+            <div className={styles.modalActions}>
+              <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>Cancelar</Button>
+              <Button onClick={handleDeleteSale} disabled={isDeleting || !justification}>
+                {isDeleting ? 'Excluindo...' : 'Confirmar Exclusão'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showJustificationModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <h3>📄 Justificativa de Exclusão</h3>
+            <p style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f9f9f9', borderRadius: '8px', borderLeft: '4px solid #ef4444' }}>
+              "{selectedSale?.deletionJustification || 'Sem justificativa informada.'}"
+            </p>
+            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '1.5rem' }}>
+              Excluída em: {selectedSale?.deletedAt ? new Date(selectedSale.deletedAt).toLocaleString() : '---'}
+            </div>
+            <div className={styles.modalActions}>
+              <Button onClick={() => setShowJustificationModal(false)}>Fechar</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

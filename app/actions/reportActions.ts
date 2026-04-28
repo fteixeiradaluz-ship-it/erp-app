@@ -18,7 +18,7 @@ export async function getSalesReport(startDate?: string, endDate?: string) {
     const sales = await prisma.sale.findMany({
       where: {
         ...userFilter,
-        deletedAt: null,
+        deletedAt: session.role === 'ADMIN' ? undefined : null,
         createdAt: {
           gte: startDate && startDate !== "" ? new Date(startDate) : undefined,
           lte: endDate && endDate !== "" ? new Date(endDate) : undefined,
@@ -26,8 +26,8 @@ export async function getSalesReport(startDate?: string, endDate?: string) {
       },
       include: {
         user: { select: { name: true, commissionPercent: true } },
-        customer: { select: { name: true } },
-        items: { include: { product: true } }
+        items: { include: { product: true } },
+        customer: { select: { name: true, phone: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -72,7 +72,9 @@ export async function getFinancialReport(startDate?: string, endDate?: string) {
           lte: endDate && endDate !== "" ? new Date(endDate) : undefined,
         }
       },
-      include: { bank: { select: { name: true } } },
+      include: { 
+        bank: { select: { name: true } } 
+      },
       orderBy: { createdAt: 'desc' }
     })
     return { success: true, transactions }

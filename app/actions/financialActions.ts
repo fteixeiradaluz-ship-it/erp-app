@@ -384,7 +384,10 @@ export async function deleteTransaction(id: string, reason: string) {
 
             await tx.transaction.update({
                 where: { id },
-                data: { deletedAt: new Date() }
+                data: { 
+                    deletedAt: new Date(),
+                    deletionJustification: reason
+                }
             })
 
             // If there's an associated Sale, soft-delete it too

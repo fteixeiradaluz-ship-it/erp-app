@@ -118,3 +118,78 @@
     font-size: 0.9rem;
   }
 }
+
+.voidedRow {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+  color: #999 !important;
+}
+
+.voidedRow td {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.voidedRow .actionsCell {
+  text-decoration: none !important;
+  opacity: 1 !important;
+}
+
+.actionBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  font-size: 1.1rem;
+}
+
+.actionBtn:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+.deleteBtn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.viewBtn:hover {
+  color: var(--gold-primary);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  border: 1px solid var(--border-gold);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.modalContent h3 {
+  margin-bottom: 1rem;
+  color: var(--gold-primary);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}

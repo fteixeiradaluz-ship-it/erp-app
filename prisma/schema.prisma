@@ -93,9 +93,10 @@ model Sale {
   labelGenerated  Boolean  @default(false)
   isSent          Boolean  @default(false)
   
-  deletedAt       DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  deletedAt             DateTime?
+  deletionJustification String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model SaleItem {
@@ -129,7 +130,8 @@ model Transaction {
   status      String   @default("PENDING") // PENDING, PAID
   dueDate     DateTime?
   payDate     DateTime?
-  deletedAt   DateTime?
+  deletedAt             DateTime?
+  deletionJustification String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
