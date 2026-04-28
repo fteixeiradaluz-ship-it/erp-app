@@ -91,28 +91,28 @@ export default function ConfiguracoesPage() {
           <div className={styles.section}>
             <h2>Perfil da Empresa</h2>
             
-            <div className={styles.logoSection} style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '2rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
-               <div className={styles.logoPreview} style={{ width: '120px', height: '120px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px dashed rgba(255,255,255,0.2)' }}>
+            <div className={styles.logoSection}>
+               <div className={styles.logoPreview}>
                   {formData.companyLogo ? (
-                    <img src={formData.companyLogo} alt="Logo Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    <img src={formData.companyLogo} alt="Logo Preview" />
                   ) : (
                     <span style={{ fontSize: '2rem' }}>🖼️</span>
                   )}
                </div>
-               <div style={{ flex: 1 }}>
-                  <label htmlFor="logo-upload" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Logomarca da Empresa</label>
+               <div className={styles.logoActions}>
+                  <label htmlFor="logo-upload" className={styles.logoLabel}>Logomarca da Empresa</label>
                   <input 
                     id="logo-upload"
                     type="file" 
                     accept="image/*" 
                     onChange={handleFileChange}
-                    style={{ marginBottom: '0.5rem' }}
+                    className={styles.fileInput}
                   />
-                  <p style={{ fontSize: '0.8rem', color: '#888' }}>Formatos aceitos: PNG, JPG. Tamanho máx: 2MB.</p>
+                  <p className={styles.helpText}>Formatos aceitos: PNG, JPG. Tamanho máx: 2MB.</p>
                </div>
             </div>
 
-            <div className={styles.inputGroup} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className={styles.inputGrid}>
               <Input 
                 label="Razão Social / Nome Fantasia" 
                 value={formData.companyName}
@@ -124,12 +124,13 @@ export default function ConfiguracoesPage() {
                 value={formData.companyCnpj}
                 onChange={(e) => setFormData({...formData, companyCnpj: e.target.value})}
               />
-              <Input 
-                label="Endereço Completo" 
-                value={formData.companyAddress}
-                onChange={(e) => setFormData({...formData, companyAddress: e.target.value})}
-                style={{ gridColumn: 'span 2' }}
-              />
+              <div className={styles.fullWidth}>
+                <Input 
+                  label="Endereço Completo" 
+                  value={formData.companyAddress}
+                  onChange={(e) => setFormData({...formData, companyAddress: e.target.value})}
+                />
+              </div>
               <Input 
                 label="Telefone / Contato" 
                 value={formData.companyPhone}

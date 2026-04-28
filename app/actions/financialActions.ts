@@ -338,3 +338,88 @@ export async function getPendingReceivables() {
     }
 }
 
+
+export async function deleteTransaction(id: string, reason: string) {
+    const session = await getSession()
+    if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+    if (!reason) return { error: 'A justificativa é obrigatória' }
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            const transaction = await tx.transaction.findUnique({ where: { id } })
+            if (!transaction) throw new Error('Transação não encontrada')
+
+            // If it was PAID, we need to revert the bank balance
+            if (transaction.status === 'PAID') {
+                const modifier = transaction.type === 'INCOME' ? -1 : 1 // Reverse modifier
+                await tx.bank.update({
+                    where: { id: transaction.bankId },
+                    data: { balance: { increment: transaction.amount * modifier } }
+                })
+            }
+
+            await tx.transaction.delete({ where: { id } })
+        })
+
+        await createAuditLog(session.userId, 'DELETE_TRANSACTION', 'Transaction', { id, reason })
+
+        revalidatePath('/financeiro')
+        revalidatePath('/contas-pagar')
+        revalidatePath('/dashboard')
+        return { success: true }
+    } catch (err: any) {
+        return { error: err.message || 'Erro ao excluir transação' }
+    }
+}
+
+export async function updateTransaction(id: string, data: any, reason: string) {
+    const session = await getSession()
+    if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+    if (!reason) return { error: 'A justificativa é obrigatória' }
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            const oldTx = await tx.transaction.findUnique({ where: { id } })
+            if (!oldTx) throw new Error('Transação não encontrada')
+
+            // Revert old balance if it was PAID
+            if (oldTx.status === 'PAID') {
+                const oldModifier = oldTx.type === 'INCOME' ? -1 : 1
+                await tx.bank.update({
+                    where: { id: oldTx.bankId },
+                    data: { balance: { increment: oldTx.amount * oldModifier } }
+                })
+            }
+
+            const updatedTx = await tx.transaction.update({
+                where: { id },
+                data: {
+                    bankId: data.bankId,
+                    type: data.type,
+                    amount: data.amount,
+                    description: data.description,
+                    status: data.status,
+                    payDate: data.status === 'PAID' ? (oldTx.payDate || new Date()) : null
+                }
+            })
+
+            // Apply new balance if it is PAID
+            if (updatedTx.status === 'PAID') {
+                const newModifier = updatedTx.type === 'INCOME' ? 1 : -1
+                await tx.bank.update({
+                    where: { id: updatedTx.bankId },
+                    data: { balance: { increment: updatedTx.amount * newModifier } }
+                })
+            }
+        })
+
+        await createAuditLog(session.userId, 'UPDATE_TRANSACTION', 'Transaction', { id, reason, data })
+
+        revalidatePath('/financeiro')
+        revalidatePath('/contas-pagar')
+        revalidatePath('/dashboard')
+        return { success: true }
+    } catch (err: any) {
+        return { error: err.message || 'Erro ao atualizar transação' }
+    }
+}

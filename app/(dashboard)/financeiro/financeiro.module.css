@@ -9,9 +9,18 @@
   color: var(--gold-primary);
 }
 
+.formHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
 .grid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 320px 1fr;
   gap: 2rem;
 }
 
@@ -24,25 +33,26 @@
 .sectionTitle {
   font-size: 1.2rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--foreground);
   margin-bottom: 0.5rem;
 }
 
 .bankCard {
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  padding: 1.2rem;
+  background: #fff;
+  border: 1px solid var(--border-gold);
 }
 
 .bankInfo {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 0.5rem;
 }
 
 .bankName {
   font-weight: 600;
+  color: var(--foreground);
 }
 
 .bankBalance {
@@ -55,19 +65,20 @@
   overflow-x: auto;
   border-radius: 12px;
   border: 1px solid var(--border-gold);
-  background: rgba(25, 25, 25, 0.4);
-  backdrop-filter: blur(10px);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 800px;
 }
 
 .table th {
   text-align: left;
   padding: 1rem;
-  background: rgba(212, 175, 55, 0.1);
+  background: rgba(212, 175, 55, 0.05);
   color: var(--gold-primary);
   font-size: 0.85rem;
   border-bottom: 1px solid var(--border-gold);
@@ -75,50 +86,103 @@
 
 .table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--background);
   font-size: 0.9rem;
+  color: var(--foreground);
+}
+
+.table tr:hover {
+  background: var(--surface-hover);
 }
 
 .income {
   color: #4caf50;
+  font-weight: 700;
 }
 
 .expense {
   color: #f44336;
+  font-weight: 700;
 }
 
 .statusPaid {
   color: #4caf50;
   font-size: 0.75rem;
-  font-weight: bold;
+  font-weight: 800;
 }
 
 .statusPending {
   color: #ff9800;
   font-size: 0.75rem;
-  font-weight: bold;
+  font-weight: 800;
 }
 
-/* Form Styles */
-.formHeader {
+.actionsCell {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  justify-content: center;
 }
 
+.actionBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  font-size: 1.1rem;
+}
+
+.actionBtn:hover {
+  background: var(--gold-light);
+  transform: scale(1.1);
+}
+
+.editBtn {
+  color: var(--gold-primary);
+}
+
+.deleteBtn {
+  color: #f44336;
+}
+
+.justificationArea {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-gold);
+  background: #fff;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  resize: vertical;
+}
+
+.importBtn {
+  background: var(--surface-card);
+  border: 1px solid var(--gold-primary);
+  color: var(--gold-primary);
+}
+
+.importBtn:hover {
+  background: var(--gold-primary);
+  color: #fff;
+}
+
+
+/* Modais */
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(5px);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 2000;
+  padding: 1rem;
 }
 
 .modal {
@@ -127,19 +191,43 @@
 }
 
 .modalContent {
-  padding: 2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.modalContent h2 {
+  color: var(--gold-primary);
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
 }
 
 .select {
   width: 100%;
   padding: 0.8rem 1rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
+  border: 1px solid var(--border-gold);
+  background: #fff;
+  color: var(--foreground);
   font-size: 1rem;
   outline: none;
+}
+
+.select:focus {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

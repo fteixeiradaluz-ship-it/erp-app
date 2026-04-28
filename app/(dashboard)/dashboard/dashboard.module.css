@@ -250,3 +250,41 @@
   color: #444;
   font-style: italic;
 }
+
+@media (max-width: 768px) {
+  .header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .kpiValue {
+    font-size: 1.4rem;
+  }
+  
+  .chartCard {
+    padding: 1.2rem;
+  }
+  
+  .chartContainer {
+    height: 200px;
+    gap: 4px;
+  }
+  
+  .axisLabel {
+    display: none; /* Esconde labels rotacionados no mobile para não sobrepor */
+  }
+}
+
+@media (max-width: 480px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}

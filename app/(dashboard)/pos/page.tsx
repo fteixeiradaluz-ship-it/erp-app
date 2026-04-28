@@ -19,6 +19,8 @@ export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('PIX')
+  const [installments, setInstallments] = useState(1)
+  const [discount, setDiscount] = useState(0)
   
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -57,6 +59,8 @@ export default function POSPage() {
     const result = await submitSale({
       customerId: selectedCustomer,
       paymentMethod,
+      installments: paymentMethod === 'CARTAO' ? installments : 1,
+      discount: (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') ? discount : 0,
       items: cart.map(item => ({ productId: item.id, quantity: item.quantity, price: item.price }))
     })
 
@@ -66,6 +70,8 @@ export default function POSPage() {
       setSaleResult(result.sale)
       setCart([])
       setSelectedCustomer('')
+      setDiscount(0)
+      setInstallments(1)
     }
     setSubmitting(false)
   }
@@ -78,7 +84,9 @@ export default function POSPage() {
     setSaleResult(null)
   }
 
-  const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const discountValue = (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') ? (subtotal * (discount / 100)) : 0
+  const total = subtotal - discountValue
 
   if (loading) return <div>Carregando PDV...</div>
 
@@ -136,10 +144,47 @@ export default function POSPage() {
                 <option value="CARTAO">Cartão de Crédito</option>
               </select>
             </div>
+
+            {paymentMethod === 'CARTAO' && (
+              <div className={styles.field}>
+                <label>Parcelas (Sem Juros)</label>
+                <select value={installments} onChange={e => setInstallments(Number(e.target.value))} className={styles.select}>
+                  <option value={1}>1x</option>
+                  <option value={2}>2x</option>
+                  <option value={3}>3x</option>
+                  <option value={4}>4x</option>
+                </select>
+              </div>
+            )}
+
+            {(paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') && (
+              <div className={styles.field}>
+                <label>Desconto (%)</label>
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="100" 
+                  value={discount} 
+                  onChange={e => setDiscount(Number(e.target.value))} 
+                  className={styles.select}
+                  style={{ padding: '0.5rem' }}
+                />
+              </div>
+            )}
           </div>
 
+          <div className={styles.totalRow} style={{ borderBottom: '1px solid #eee', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
+            <span>Subtotal:</span>
+            <span>R$ {subtotal.toFixed(2)}</span>
+          </div>
+          {discountValue > 0 && (
+            <div className={styles.totalRow} style={{ color: '#4caf50' }}>
+              <span>Desconto:</span>
+              <span>- R$ {discountValue.toFixed(2)}</span>
+            </div>
+          )}
           <div className={styles.totalRow}>
-            <span>Total:</span>
+            <span>TOTAL:</span>
             <span className={styles.totalAmount}>R$ {total.toFixed(2)}</span>
           </div>
 

@@ -1,0 +1,75 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  color: var(--gold-primary);
+  margin-bottom: 0.25rem;
+}
+
+.header p {
+  color: #666;
+}
+
+.tableWrapper {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--border-gold);
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 1rem;
+  background: rgba(212, 175, 55, 0.05);
+  color: var(--gold-primary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-gold);
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.9rem;
+}
+
+.dateCell {
+  white-space: nowrap;
+  color: #666;
+}
+
+.userCell {
+  font-weight: 600;
+}
+
+.actionBadge {
+  background: #f0f0f0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #555;
+}
+
+.detailsCell {
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .detailsCell {
+    max-width: 200px;
+  }
+}

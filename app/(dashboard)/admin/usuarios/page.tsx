@@ -231,9 +231,20 @@ export default function UsuariosPage() {
                         onChange={(e) => setFormData({...formData, role: e.target.value})}
                       >
                         <option value="SELLER">Vendedor (PDV e Clientes)</option>
-                        <option value="SECRETARY">Secretária (Consultas, PDV e Clientes)</option>
-                        <option value="ADMIN">Administrador (Gerencial)</option>
+                        <option value="SECRETARY">Secretária (Agenda, PDV e Clientes)</option>
+                        <option value="ADMIN">Administrador (Gerencial Total)</option>
                       </select>
+                      <div className={styles.roleDescription}>
+                        {formData.role === 'ADMIN' && (
+                          <p>✅ Acesso Total: Financeiro, Estoque, Logs, Usuários, Configurações e Relatórios.</p>
+                        )}
+                        {formData.role === 'SECRETARY' && (
+                          <p>✅ Acesso: Agenda, PDV, Clientes e Relatórios de Consultas.</p>
+                        )}
+                        {formData.role === 'SELLER' && (
+                          <p>✅ Acesso: PDV, Clientes, Envios e Relatórios de Vendas.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 

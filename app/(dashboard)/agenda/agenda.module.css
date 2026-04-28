@@ -1,0 +1,273 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.titleArea h1 {
+  font-size: 1.8rem;
+  color: var(--gold-primary);
+  margin-bottom: 0.25rem;
+}
+
+.titleArea p {
+  color: #666;
+  text-transform: capitalize;
+}
+
+.dateControls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.agendaGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.slot {
+  display: flex;
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  min-height: 80px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s;
+}
+
+.slot:hover {
+  transform: translateX(4px);
+}
+
+.slotTime {
+  width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  background: rgba(212, 175, 55, 0.05);
+  border-right: 1px solid var(--border-gold);
+  color: var(--gold-primary);
+}
+
+.slotContent {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.freeActions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.addBtn {
+  flex: 2;
+  background: none;
+  border: 2px dashed var(--border-gold);
+  color: var(--gold-primary);
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.addBtn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-style: solid;
+}
+
+.addBtn:disabled {
+  border-color: #eee;
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.blockBtn {
+  flex: 1;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  color: #c53030;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.blockBtn:hover {
+  background: #feb2b2;
+}
+
+.occupiedSlot {
+  border-left: 6px solid var(--gold-primary);
+}
+
+.blockedSlot {
+  background: #f8f9fa;
+  border-left: 6px solid #666;
+}
+
+.blockedInfo {
+  color: #666;
+}
+
+.blockedInfo span {
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.apptInfo {
+  width: 100%;
+}
+
+.apptHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.apptHeader strong {
+  font-size: 1.1rem;
+  color: var(--foreground);
+}
+
+.returnBadge {
+  background: rgba(99, 179, 237, 0.1);
+  color: #2196f3;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.apptInfo p {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.apptActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.statusCompleted {
+  color: #4caf50;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.statusCancelled {
+  color: #f44336;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.modal {
+  width: 100%;
+  max-width: 500px;
+}
+
+.modalContent {
+  padding: 1.5rem;
+}
+
+.formGroup {
+  margin-bottom: 1.25rem;
+}
+
+.formGroup label {
+  display: block;
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.select, .textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-gold);
+  background: #fff;
+  font-family: inherit;
+}
+
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.upcomingAlert {
+  border: 2px solid #f44336 !important;
+  background: rgba(244, 67, 54, 0.02);
+}
+
+.pulseAlert {
+  font-size: 0.7rem;
+  background: #f44336;
+  color: #fff;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .slot {
+    flex-direction: column;
+  }
+  .slotTime {
+    width: 100%;
+    padding: 0.5rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border-gold);
+  }
+  .apptActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -13,9 +13,10 @@ export async function getCustomers(search?: string) {
       where: {
         deletedAt: null,
         OR: search ? [
-          { name: { contains: search } },
-          { email: { contains: search } },
-          { phone: { contains: search } }
+          { name: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search, mode: 'insensitive' } },
+          { cpf: { contains: search, mode: 'insensitive' } }
         ] : undefined
       },
       include: {
@@ -36,36 +37,49 @@ export async function getCustomers(search?: string) {
 export async function upsertCustomer(data: {
   id?: string
   name: string
+  cpf?: string
   email?: string
   phone?: string
+  address?: string
+  number?: string
+  complement?: string
+  neighborhood?: string
+  city?: string
+  shippingNotes?: string
 }) {
   const session = await getSession()
   if (!session) return { error: 'Não autorizado' }
 
   try {
     let customer;
+    const customerData = {
+      name: data.name,
+      cpf: data.cpf,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      number: data.number,
+      complement: data.complement,
+      neighborhood: data.neighborhood,
+      city: data.city,
+      shippingNotes: data.shippingNotes,
+    }
+
     if (data.id) {
       customer = await prisma.customer.update({
         where: { id: data.id },
-        data: {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-        }
+        data: customerData
       })
     } else {
       customer = await prisma.customer.create({
-        data: {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-        }
+        data: customerData
       })
     }
     revalidatePath('/clientes')
     revalidatePath('/pos')
     return { success: true, customer }
   } catch (err: any) {
+    if (err.code === 'P2002') return { error: 'CPF já cadastrado' }
     return { error: 'Erro ao salvar cliente' }
   }
 }

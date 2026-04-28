@@ -187,7 +187,7 @@ export default function ContasAPagarPage() {
                   
                   <div style={{ display: 'flex', gap: '1rem' }}>
                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                       <label style={{ fontSize: '0.85rem', color: '#ccc' }}>Parcelado em</label>
+                       <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Parcelado em</label>
                        <select 
                          style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
                          value={form.installments}
@@ -211,7 +211,7 @@ export default function ContasAPagarPage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <label style={{ fontSize: '0.85rem', color: '#ccc' }}>Pagar com (Banco Previsto)</label>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pagar com (Banco Previsto)</label>
                     <select 
                       style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
                       value={form.bankId}

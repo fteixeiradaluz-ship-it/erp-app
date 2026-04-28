@@ -5,11 +5,12 @@ import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function createAppointment(data: {
-  customerId: string;
+  customerId?: string;
   date: Date;
   description?: string;
   isReturn?: boolean;
   originalApptId?: string;
+  isBlocked?: boolean;
 }) {
   const session = await getSession();
   if (!session || (session.role !== 'ADMIN' && session.role !== 'SECRETARY')) {
@@ -19,22 +20,31 @@ export async function createAppointment(data: {
   try {
     const appointment = await prisma.appointment.create({
       data: {
-        customerId: data.customerId,
+        customerId: data.customerId || null,
         date: data.date,
         description: data.description,
         isReturn: data.isReturn || false,
         originalApptId: data.originalApptId,
+        isBlocked: data.isBlocked || false,
       },
     });
     
     revalidatePath("/dashboard");
-    revalidatePath("/consultas");
+    revalidatePath("/agenda");
     
     return { success: true, appointment };
   } catch (error) {
     console.error("Error creating appointment:", error);
     return { success: false, error: "Falha ao criar consulta." };
   }
+}
+
+export async function blockSlot(date: Date, description: string) {
+  return createAppointment({
+    date,
+    description,
+    isBlocked: true
+  });
 }
 
 export async function getAppointments(filters?: { 
@@ -93,7 +103,7 @@ export async function updateAppointmentStatus(id: string, status: string) {
     });
     
     revalidatePath("/dashboard");
-    revalidatePath("/consultas");
+    revalidatePath("/agenda");
     
     return { success: true, appointment };
   } catch (error) {
@@ -114,7 +124,7 @@ export async function deleteAppointment(id: string) {
     });
     
     revalidatePath("/dashboard");
-    revalidatePath("/consultas");
+    revalidatePath("/agenda");
     
     return { success: true };
   } catch (error) {

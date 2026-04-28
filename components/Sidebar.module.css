@@ -10,24 +10,46 @@
   display: flex;
   flex-direction: column;
   padding: 1.5rem 0;
-  z-index: 50;
+  z-index: 1000;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+}
+
+.closeBtn {
+  display: none;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #888;
+  padding: 0 1.5rem;
+  cursor: pointer;
 }
 
 .logo {
   padding: 0 1.5rem;
   font-size: 1.5rem;
   font-weight: 800;
-  margin-bottom: 2.5rem;
   letter-spacing: 1px;
 }
 
-.erpText {
-  color: #111;
-}
-
-.premiumText {
+.companyNameText {
+  font-size: 1.1rem;
+  font-weight: 800;
   color: var(--gold-primary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  max-width: 180px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nav {
@@ -36,6 +58,7 @@
   flex: 1;
   gap: 0.5rem;
   padding: 0 1rem;
+  overflow-y: auto;
 }
 
 .navItem {
@@ -65,7 +88,8 @@
 }
 
 .footer {
-  padding: 0 1.5rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(0,0,0,0.05);
 }
 
 .logoutBtn {
@@ -84,7 +108,29 @@
 }
 
 .logoutBtn:hover {
-  background: rgba(255, 50, 50, 0.2);
-  border-color: rgba(255, 50, 50, 0.5);
-  color: #ff6b6b;
+  background: rgba(255, 50, 50, 0.1);
+  border-color: rgba(255, 50, 50, 0.3);
+  color: #ff4d4d;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .closeBtn {
+    display: block;
+  }
 }

@@ -96,7 +96,7 @@ export default function DashboardPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <h1>📊 Visão Geral do Negócio</h1>
-        <p style={{ color: '#888' }}>Confira os resultados dos últimos 30 dias.</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Confira os resultados dos últimos 30 dias com precisão premium.</p>
       </header>
 
       <section className={styles.statsGrid}>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
         <Card className={styles.chartCard}>
           <div className={styles.chartHeader}>
             <h3 className={styles.chartTitle}>Faturamento Diário</h3>
-            <span style={{ fontSize: '0.8rem', color: '#666' }}>Resumo últimos 30 dias</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Resumo últimos 30 dias</span>
           </div>
 
           <div className={styles.chartContainer}>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
         <Card className={styles.chartCard}>
           <div className={styles.chartHeader}>
             <h3 className={styles.chartTitle}>Métodos de Pagamento</h3>
-            <span style={{ fontSize: '0.8rem', color: '#666' }}>Distribuição de receita</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Distribuição de receita</span>
           </div>
 
           <div className={styles.donutSection}>
@@ -245,7 +245,7 @@ export default function DashboardPage() {
                         <h4 style={{ color: '#0ea5e9' }}>Consultas Próximas (Em até 24h)</h4>
                         <p>Você tem <strong>{upcomingAppointments.length}</strong> consulta{upcomingAppointments.length !== 1 ? 's' : ''} agendada{upcomingAppointments.length !== 1 ? 's' : ''}.</p>
                      </div>
-                     <Button variant="secondary" onClick={() => window.location.href='/consultas'} style={{marginLeft:'auto', fontSize:'0.75rem'}}>Ver Agenda</Button>
+                     <Button variant="secondary" onClick={() => window.location.href='/agenda'} style={{marginLeft:'auto', fontSize:'0.75rem'}}>Ver Agenda</Button>
                   </div>
                )}
 

@@ -1,7 +1,4 @@
-import React from 'react'
-import Sidebar from '@/components/Sidebar'
-import styles from './dashboard.module.css'
-
+import DashboardContainer from '@/components/DashboardContainer'
 import { getSession } from '@/lib/session'
 import { getSettings } from '@/app/actions/settingsActions'
 
@@ -11,13 +8,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   
   const res = await getSettings()
   const logo = res.success ? res.settings.companyLogo : null
+  const companyName = res.success ? res.settings.companyName : 'ERP Premium'
 
   return (
-    <div className={styles.layout}>
-      <Sidebar role={role} logo={logo} />
-      <main className={styles.mainContent}>
-        {children}
-      </main>
-    </div>
+    <DashboardContainer role={role} logo={logo} companyName={companyName}>
+      {children}
+    </DashboardContainer>
   )
 }

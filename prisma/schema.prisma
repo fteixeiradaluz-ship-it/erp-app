@@ -30,17 +30,24 @@ model User {
 }
 
 model Customer {
-  id        String    @id @default(cuid())
-  name      String
-  email     String?
-  phone     String?
-  sales          Sale[]
-  appointments   Appointment[]
-  medicalRecords MedicalRecord[]
-  quotations     Quotation[]
-  deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  cpf             String?   @unique
+  email           String?
+  phone           String?
+  address         String?   // Logradouro
+  number          String?   // Numero
+  complement      String?   // Complemento
+  neighborhood    String?   // Bairro
+  city            String?   // Cidade
+  shippingNotes   String?   @db.Text // Observações para envio
+  sales           Sale[]
+  appointments    Appointment[]
+  medicalRecords  MedicalRecord[]
+  quotations      Quotation[]
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Product {
@@ -70,16 +77,24 @@ model Supplier {
 }
 
 model Sale {
-  id            String   @id @default(cuid())
-  userId        String
-  customerId    String
-  user          User     @relation(fields: [userId], references: [id])
-  customer      Customer @relation(fields: [customerId], references: [id])
-  items         SaleItem[]
-  paymentMethod String // A_VISTA, PIX, CARTAO
-  totalAmount   Float
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  userId          String
+  customerId      String
+  user            User     @relation(fields: [userId], references: [id])
+  customer        Customer @relation(fields: [customerId], references: [id])
+  items           SaleItem[]
+  paymentMethod   String   // A_VISTA, PIX, CARTAO
+  installments    Int      @default(1) // Up to 4 for card
+  discount        Float    @default(0) // Percentage or absolute? User said "percentual"
+  totalAmount     Float
+  
+  // Shipping management
+  nfGenerated     Boolean  @default(false)
+  labelGenerated  Boolean  @default(false)
+  isSent          Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model SaleItem {
@@ -142,12 +157,13 @@ model AuditLog {
 
 model Appointment {
   id              String      @id @default(cuid())
-  customerId      String
-  customer        Customer    @relation(fields: [customerId], references: [id])
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id])
   date            DateTime
   description     String?
   status          String      @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
   isReturn        Boolean     @default(false)
+  isBlocked       Boolean     @default(false) // New field for blocking slots
   
   // Self-relation to link a return appointment back to its original appointment
   originalApptId  String?

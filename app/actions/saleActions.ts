@@ -6,16 +6,21 @@ import { getSession } from '@/lib/session'
 export async function submitSale(data: {
   customerId: string;
   paymentMethod: string;
+  installments?: number;
+  discount?: number; // Percentual
   items: { productId: string, quantity: number, price: number }[];
 }) {
   const session = await getSession();
   if (!session) return { error: 'Não autorizado' };
 
   try {
-    let totalAmount = 0;
+    let subtotal = 0;
     for (const item of data.items) {
-      totalAmount += item.price * item.quantity;
+      subtotal += item.price * item.quantity;
     }
+
+    const discountAmount = data.discount ? (subtotal * (data.discount / 100)) : 0;
+    const totalAmount = subtotal - discountAmount;
 
     const sale = await prisma.$transaction(async (tx: any) => {
       // 1. Criar a Venda
@@ -24,6 +29,8 @@ export async function submitSale(data: {
           userId: session.userId,
           customerId: data.customerId,
           paymentMethod: data.paymentMethod,
+          installments: data.installments || 1,
+          discount: data.discount || 0,
           totalAmount: totalAmount,
           items: {
             create: data.items.map((item: any) => ({
@@ -51,12 +58,13 @@ export async function submitSale(data: {
         });
       }
 
+      // Para cartão, se parcelado, podemos lançar como uma única pendente com a info
       await tx.transaction.create({
         data: {
           bankId: bank.id,
           type: 'INCOME',
           amount: totalAmount,
-          description: `Venda #${newSale.id.slice(0,6)}`,
+          description: `Venda #${newSale.id.slice(0,6)}${data.installments && data.installments > 1 ? ` (${data.installments}x)` : ''}`,
           status: data.paymentMethod === 'CARTAO' ? 'PENDING' : 'PAID',
           dueDate: data.paymentMethod === 'CARTAO' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : new Date(),
         }
@@ -93,6 +101,9 @@ export async function getPOSData() {
   if (!session) return { customers: [], products: [] };
 
   const customers = await prisma.customer.findMany({ select: { id: true, name: true }});
-  const products = await prisma.product.findMany({ select: { id: true, name: true, price: true, stock: true }});
+  const products = await prisma.product.findMany({ 
+    where: { deletedAt: null },
+    select: { id: true, name: true, price: true, stock: true }
+  });
   return { customers, products };
 }

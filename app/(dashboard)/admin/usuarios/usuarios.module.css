@@ -15,6 +15,20 @@
   color: var(--gold-primary);
 }
 
+.roleDescription {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--gold-light);
+  border-radius: 4px;
+  border-left: 3px solid var(--gold-primary);
+}
+
+.roleDescription p {
+  font-size: 0.75rem;
+  margin: 0;
+  color: var(--text-secondary);
+}
+
 .tableWrapper {
   overflow-x: auto;
   border-radius: 12px;

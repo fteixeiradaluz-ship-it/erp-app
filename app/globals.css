@@ -1,23 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --background: #f8f9fa;
-  --foreground: #1a1a1a;
+  --background: #fdfdfb; /* Very light cream/white */
+  --foreground: #2d2d2d;
   --gold-primary: #d4af37;
-  --gold-hover: #b5952f;
-  --panel-bg: rgba(255, 255, 255, 0.9);
+  --gold-hover: #c4a02d;
+  --gold-light: rgba(212, 175, 55, 0.1);
+  --panel-bg: rgba(255, 255, 255, 0.95);
   --card-bg: #ffffff;
-  --border-gold: rgba(212, 175, 55, 0.3);
-  --sidebar-w: 250px;
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --border-gold: rgba(212, 175, 55, 0.25);
+  --sidebar-w: 260px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 8px 24px rgba(212, 175, 55, 0.08);
   
-  /* Aliases for older components */
+  /* Aliases for warmer tones */
   --text-primary: var(--foreground);
-  --text-secondary: #666;
+  --text-secondary: #7a735a; /* Warm grey/gold mix */
   --border-color: var(--border-gold);
   --surface-card: var(--card-bg);
-  --surface-hover: #fdfaf0;
+  --surface-hover: #fefcf5;
+  
+  --mobile-header-h: 70px;
+  
+  --success: #2e7d32;
+  --error: #d32f2f;
+  --warning: #ed6c02;
+  --info: #0288d1;
+}
+
+/* Utilitário para tabelas responsivas */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+.tableContainer table {
+  min-width: 600px; /* Garante que a tabela não esmague no celular */
 }
 
 * {

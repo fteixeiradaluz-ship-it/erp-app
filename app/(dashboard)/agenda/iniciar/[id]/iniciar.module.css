@@ -1,0 +1,83 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  font-size: 1.8rem;
+  color: var(--gold-primary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+}
+
+.card {
+  padding: 1.5rem;
+}
+
+.card h3 {
+  color: var(--gold-primary);
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.info p {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border-gold);
+  margin: 1rem 0;
+}
+
+.notes {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 400px;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-gold);
+  background: #fdfaf0;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.authorBadge {
+  font-size: 0.75rem;
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--gold-primary);
+  padding: 0.2rem 0.5rem;
+  border-radius: 99px;
+  font-weight: bold;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

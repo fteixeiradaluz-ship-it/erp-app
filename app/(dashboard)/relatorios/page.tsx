@@ -116,9 +116,9 @@ export default function RelatoriosPage() {
             fontSize: '0.75rem',
             padding: '0.3rem 0.8rem',
             borderRadius: '99px',
-            background: isAdmin ? 'rgba(212,175,55,0.15)' : 'rgba(99,179,237,0.15)',
-            color: isAdmin ? 'var(--gold-primary)' : '#63b3ed',
-            border: `1px solid ${isAdmin ? 'var(--border-gold)' : '#63b3ed44'}`,
+            background: isAdmin ? 'var(--gold-light)' : 'rgba(2, 136, 209, 0.1)',
+            color: isAdmin ? 'var(--gold-primary)' : 'var(--info)',
+            border: `1px solid ${isAdmin ? 'var(--border-gold)' : 'rgba(2, 136, 209, 0.2)'}`,
             marginLeft: '1rem'
           }}>
             {isAdmin ? '🛡️ Visualização: ADMIN (Completa)' : isSecretary ? '📋 Visualização: Secretária' : '👤 Visualização: Minhas vendas'}
@@ -140,7 +140,7 @@ export default function RelatoriosPage() {
             className={`${styles.tab} ${activeTab === 'appointments' ? styles.activeTab : ''}`}
             onClick={() => setActiveTab('appointments')}
           >
-            🩺 Consultas
+            📅 Agenda
           </div>
         )}
 
@@ -182,7 +182,7 @@ export default function RelatoriosPage() {
         {/* Filtro por vendedor: só para ADMIN na aba de vendas */}
         {activeTab === 'sales' && isAdmin && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={{ fontSize: '0.85rem', color: '#ccc' }}>Filtrar por Vendedor</label>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Filtrar por Vendedor</label>
             <select
               style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
               value={sellerFilter}
@@ -229,12 +229,12 @@ export default function RelatoriosPage() {
                     <tr key={s.id}>
                       <td>{new Date(s.createdAt).toLocaleDateString()}</td>
                       <td>{s.customer.name}</td>
-                      <td style={{ fontSize: '0.85rem', color: '#aaa', maxWidth: '200px' }}>
+                      <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
                         {s.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(', ')}
                       </td>
                       {isAdmin && <td>{s.user.name} <span style={{ fontSize: '0.7em', color: '#888' }}>({comm}%)</span></td>}
                       <td>{s.paymentMethod}</td>
-                      <td style={{ color: '#4caf50', fontWeight: 'bold' }}>{formatCurrency(commVal)}</td>
+                      <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>{formatCurrency(commVal)}</td>
                       {isAdmin && <td style={{ fontWeight: 'bold', color: 'var(--gold-primary)' }}>{formatCurrency(s.totalAmount)}</td>}
                     </tr>
                   )
@@ -246,7 +246,7 @@ export default function RelatoriosPage() {
                     <td colSpan={isAdmin ? (sellerFilter ? 5 : 5) : 4} style={{ textAlign: 'right', color: '#aaa' }}>
                       {sellerFilter ? `Total comissão de ${sellerFilter}:` : 'Total das minhas comissões:'}
                     </td>
-                    <td style={{ color: '#4caf50', fontSize: '1.05rem' }}>
+                    <td style={{ color: 'var(--success)', fontSize: '1.05rem' }}>
                       {formatCurrency(
                         data
                           .filter(s => sellerFilter ? s.user.name === sellerFilter : true)
@@ -283,7 +283,7 @@ export default function RelatoriosPage() {
                   <tr><td colSpan={6} style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>Nenhuma consulta no período.</td></tr>
                 ) : data.map((a: any) => {
                   const dt = new Date(a.date)
-                  const statusColor = a.status === 'COMPLETED' ? '#4caf50' : a.status === 'CANCELLED' ? '#f44336' : 'var(--gold-primary)'
+                  const statusColor = a.status === 'COMPLETED' ? 'var(--success)' : a.status === 'CANCELLED' ? 'var(--error)' : 'var(--gold-primary)'
                   const statusLabel = a.status === 'COMPLETED' ? 'Realizada' : a.status === 'CANCELLED' ? 'Cancelada' : 'Agendada'
                   return (
                     <tr key={a.id}>
@@ -292,7 +292,7 @@ export default function RelatoriosPage() {
                       <td style={{ fontWeight: '600' }}>{a.customer.name}</td>
                       <td>{a.customer.phone || '---'}</td>
                       <td><span style={{ color: statusColor, fontWeight: 'bold' }}>{statusLabel}</span></td>
-                      <td style={{ color: a.isReturn ? '#63b3ed' : '#666' }}>{a.isReturn ? '🔄 Sim' : 'Não'}</td>
+                      <td style={{ color: a.isReturn ? 'var(--info)' : 'var(--text-secondary)' }}>{a.isReturn ? '🔄 Sim' : 'Não'}</td>
                     </tr>
                   )
                 })}
@@ -328,9 +328,9 @@ export default function RelatoriosPage() {
                     <td>{p.supplier?.name || '---'}</td>
                     <td>{formatCurrency(p.cost)}</td>
                     <td>{formatCurrency(p.price)}</td>
-                    <td style={{ fontWeight: 'bold', color: p.stock <= 5 ? '#f44336' : '#fff' }}>
-                      {p.stock <= 5 ? `⚠️ ${p.stock}` : p.stock}
-                    </td>
+                    <td style={{ fontWeight: 'bold', color: p.stock <= 5 ? 'var(--error)' : 'inherit' }}>
+                        {p.stock <= 5 ? `⚠️ ${p.stock}` : p.stock}
+                      </td>
                   </tr>
                 ))}
               </tbody>
@@ -358,7 +358,7 @@ export default function RelatoriosPage() {
                     <td>{t.description}</td>
                     <td>{t.bank.name}</td>
                     <td>{t.type === 'INCOME' ? 'Receita' : 'Despesa'}</td>
-                    <td style={{ fontWeight: 'bold', color: t.type === 'INCOME' ? '#4caf50' : '#f44336' }}>
+                    <td style={{ fontWeight: 'bold', color: t.type === 'INCOME' ? 'var(--success)' : 'var(--error)' }}>
                       {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
                     </td>
                   </tr>

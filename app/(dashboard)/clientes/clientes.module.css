@@ -8,6 +8,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .headerTitleArea h1 {
@@ -17,7 +19,7 @@
 }
 
 .subtitle {
-  color: #888;
+  color: #666;
   font-size: 0.9rem;
 }
 
@@ -25,6 +27,7 @@
   display: flex;
   gap: 1rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .searchWrapper {
@@ -35,19 +38,20 @@
   overflow-x: auto;
   border-radius: 12px;
   border: 1px solid var(--border-gold);
-  background: rgba(25, 25, 25, 0.4);
-  backdrop-filter: blur(10px);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 800px; /* Force scroll on mobile */
 }
 
 .table th {
   text-align: left;
   padding: 1rem;
-  background: rgba(212, 175, 55, 0.1);
+  background: rgba(212, 175, 55, 0.05);
   color: var(--gold-primary);
   font-weight: 600;
   border-bottom: 1px solid var(--border-gold);
@@ -55,22 +59,22 @@
 
 .table td {
   padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--background);
 }
 
 .table tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-hover);
 }
 
 .customerInfo h4 {
   margin: 0;
-  color: #fff;
+  color: var(--foreground);
 }
 
 .customerInfo p {
   margin: 0;
   font-size: 0.85rem;
-  color: #aaa;
+  color: #666;
 }
 
 .statsBadge {
@@ -97,41 +101,92 @@
 /* Modal */
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(5px);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 2000;
+  padding: 1rem;
 }
 
 .modal {
   width: 100%;
-  max-width: 500px;
+  max-width: 800px;
 }
 
 .modalContent {
-  padding: 2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
 .formGrid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
 
+.fullWidth {
+  grid-column: span 2;
+}
+
 .formFooter {
+  grid-column: span 2;
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
   margin-top: 1rem;
+}
+
+/* Detail View */
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  color: var(--foreground);
+}
+
+.detailItem label {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.detailItem p {
+  font-weight: 500;
+  margin: 0;
+}
+
+.detailFooter {
+  grid-column: span 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-gold);
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .searchWrapper {
+    width: 100%;
+  }
 }
 
 /* CRM Specific */

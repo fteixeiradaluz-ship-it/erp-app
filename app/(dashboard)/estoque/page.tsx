@@ -209,16 +209,9 @@ export default function EstoquePage() {
                     />
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', color: '#ccc' }}>Fornecedor</label>
+                      <label style={{ fontSize: '0.85rem', color: '#555' }}>Fornecedor</label>
                       <select 
-                        style={{
-                          width: '100%',
-                          padding: '0.8rem 1rem',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          background: 'rgba(0, 0, 0, 0.5)',
-                          color: '#fff',
-                        }}
+                        className={styles.select}
                         value={formData.supplierId}
                         onChange={(e) => setFormData({...formData, supplierId: e.target.value})}
                       >
