@@ -273,13 +273,13 @@ export default function RelatoriosPage() {
                     <tr key={s.id} className={isVoided ? styles.voidedRow : ''}>
                       <td>{new Date(s.createdAt).toLocaleDateString()}</td>
                       <td>
-                        {s.customer.name}
+                        {s.customer?.name || '---'}
                         {isVoided && <div style={{ fontSize: '0.7rem', color: '#ef4444', textDecoration: 'none' }}>ANULADA</div>}
                       </td>
                       <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
                         {s.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(', ')}
                       </td>
-                      {isAdmin && <td>{s.user.name} <span style={{ fontSize: '0.7em', color: '#888' }}>({comm}%)</span></td>}
+                      {isAdmin && <td>{s.user?.name || '---'} <span style={{ fontSize: '0.7em', color: '#888' }}>({comm}%)</span></td>}
                       <td>{s.paymentMethod}</td>
                       <td style={{ color: isVoided ? '#999' : 'var(--success)', fontWeight: 'bold' }}>{formatCurrency(commVal)}</td>
                       {isAdmin && <td style={{ fontWeight: 'bold', color: isVoided ? '#999' : 'var(--gold-primary)' }}>{formatCurrency(s.totalAmount)}</td>}
@@ -350,9 +350,9 @@ export default function RelatoriosPage() {
                 ) : data.map(s => (
                   <tr key={s.id}>
                     <td>{new Date(s.createdAt).toLocaleDateString()}</td>
-                    <td style={{ fontWeight: '600' }}>{s.customer.name}</td>
-                    <td>{s.customer.phone || '---'}</td>
-                    <td>{s.user.name}</td>
+                    <td style={{ fontWeight: '600' }}>{s.customer?.name || '---'}</td>
+                    <td>{s.customer?.phone || '---'}</td>
+                    <td>{s.user?.name || '---'}</td>
                     <td>
                       <span style={{ fontSize: '0.8rem' }}>
                         {s.nfGenerated ? '✅ NF' : '❌ NF'} | {s.labelGenerated ? '✅ Etiqueta' : '❌ Etiqueta'}
@@ -390,8 +390,8 @@ export default function RelatoriosPage() {
                     <tr key={a.id}>
                       <td>{dt.toLocaleDateString()}</td>
                       <td>{dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                      <td style={{ fontWeight: '600' }}>{a.customer.name}</td>
-                      <td>{a.customer.phone || '---'}</td>
+                      <td style={{ fontWeight: '600' }}>{a.customer?.name || '---'}</td>
+                      <td>{a.customer?.phone || '---'}</td>
                       <td><span style={{ color: statusColor, fontWeight: 'bold' }}>{statusLabel}</span></td>
                       <td style={{ color: a.isReturn ? 'var(--info)' : 'var(--text-secondary)' }}>{a.isReturn ? '🔄 Sim' : 'Não'}</td>
                     </tr>
