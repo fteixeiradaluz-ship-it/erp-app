@@ -469,3 +469,71 @@ export async function updateTransaction(id: string, data: any, reason: string) {
         return { error: err.message || 'Erro ao atualizar transação' }
     }
 }
+
+export async function getPartnerSplits() {
+    const session = await getSession()
+    if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+
+    try {
+        const users = await prisma.user.findMany({
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                commissionPercent: true
+            }
+        })
+
+        const splits = await Promise.all(users.map(async (user: any) => {
+            const sales = await prisma.sale.findMany({
+                where: {
+                    userId: user.id,
+                    deletedAt: null
+                },
+                select: {
+                    totalAmount: true
+                }
+            })
+
+            const totalSalesValue = sales.reduce((sum: number, sale: any) => sum + sale.totalAmount, 0)
+            const commissionPercent = user.commissionPercent || 0
+            const totalCommission = totalSalesValue * (commissionPercent / 100)
+
+            const paidTransactions = await prisma.transaction.findMany({
+                where: {
+                    deletedAt: null,
+                    type: 'EXPENSE',
+                    status: 'PAID',
+                    description: {
+                        startsWith: `Repasse de Comissão - ${user.name}`
+                    }
+                },
+                select: {
+                    amount: true
+                }
+            })
+
+            const totalPaid = paidTransactions.reduce((sum: number, tx: any) => sum + tx.amount, 0)
+            const balanceDue = totalCommission - totalPaid
+
+            return {
+                userId: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                commissionPercent,
+                totalSalesValue,
+                totalCommission,
+                totalPaid,
+                balanceDue
+            }
+        }))
+
+        return { success: true, splits }
+    } catch (err: any) {
+        console.error('Error calculating partner splits:', err)
+        return { error: 'Erro ao calcular repasse de comissões' }
+    }
+}
+

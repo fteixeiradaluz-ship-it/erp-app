@@ -267,7 +267,37 @@ export default function DashboardPage() {
             </div>
          </Card>
 
-         <Card style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.1) 0%, #ffffff 100%)', border: '1px solid var(--border-gold)' }}>
+         <Card className={styles.agendaCard}>
+            <div className={styles.chartHeader}>
+               <h3 className={styles.chartTitle} style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>✨ Agenda de Hoje</h3>
+               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date().toLocaleDateString('pt-BR')}</span>
+            </div>
+            
+            <div className={styles.agendaList}>
+               {upcomingAppointments.length === 0 ? (
+                  <div className={styles.emptyState}>Nenhum agendamento para as próximas 24h.</div>
+               ) : (
+                  upcomingAppointments.map((appt: any) => {
+                     const hora = new Date(appt.date).getHours();
+                     return (
+                        <div key={appt.id} className={styles.agendaItem}>
+                           <div className={styles.agendaTime}>{hora}:00</div>
+                           <div className={styles.agendaDetails}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                 <strong>{appt.customer?.name}</strong>
+                                 {appt.isReturn && <span className={styles.agendaBadge}>Retorno</span>}
+                              </div>
+                              <p className={styles.agendaDesc}>{appt.description || 'Procedimento Estético'}</p>
+                           </div>
+                           <Button variant="secondary" size="small" onClick={() => window.location.href=`/agenda/iniciar/${appt.id}`}>Iniciar</Button>
+                        </div>
+                     )
+                  })
+               )}
+            </div>
+         </Card>
+
+         <Card style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.1) 0%, #ffffff 100%)', border: '1px solid var(--border-gold)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
              <h3 style={{ color: 'var(--gold-primary)', marginBottom: '0.5rem' }}>💡 Resumo de Performance</h3>
              <p style={{ fontSize: '0.9rem', color: '#444', lineHeight: '1.6' }}>
                Seu lucro bruto atual é de <strong>{formatCurrency(stats.totalRevenue - stats.estProfit)}</strong> nos últimos 30 dias. 

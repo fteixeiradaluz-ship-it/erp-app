@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import styles from './financeiro.module.css'
-import { getFinancialFlow, createManualTransaction, upsertBank, updateTransaction, deleteTransaction } from '@/app/actions/financialActions'
+import { getFinancialFlow, createManualTransaction, upsertBank, updateTransaction, deleteTransaction, getPartnerSplits } from '@/app/actions/financialActions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -41,20 +41,67 @@ export default function FinanceiroPage() {
   const [importPreview, setImportPreview] = useState<any[]>([])
   const [importing, setImporting] = useState(false)
 
+  // Partner splits state
+  const [partnerSplits, setPartnerSplits] = useState<any[]>([])
+  const [isPaySplitModalOpen, setIsPaySplitModalOpen] = useState(false)
+  const [selectedPartnerForSplit, setSelectedPartnerForSplit] = useState<any>(null)
+  const [splitForm, setSplitForm] = useState({
+    bankId: '',
+    amount: ''
+  })
+
   useEffect(() => {
     load()
   }, [])
 
   async function load() {
-    const res = await getFinancialFlow()
+    const [res, splitRes] = await Promise.all([
+      getFinancialFlow(),
+      getPartnerSplits()
+    ])
     if (res.success) {
       setData(res)
       if (res.banks.length > 0 && !txForm.bankId) {
         setTxForm(prev => ({ ...prev, bankId: res.banks[0].id }))
+        setSplitForm(prev => ({ ...prev, bankId: res.banks[0].id }))
       }
+    }
+    if (splitRes.success) {
+      setPartnerSplits(splitRes.splits)
     }
     setLoading(false)
   }
+
+  const handlePaySplitClick = (partner: any) => {
+    setSelectedPartnerForSplit(partner)
+    setSplitForm({
+      bankId: data?.banks?.[0]?.id || '',
+      amount: partner.balanceDue.toFixed(2)
+    })
+    setIsPaySplitModalOpen(true)
+  }
+
+  const handleSplitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!splitForm.amount || parseFloat(splitForm.amount) <= 0) {
+      return alert('Insira um valor válido.')
+    }
+    const res = await createManualTransaction({
+      bankId: splitForm.bankId,
+      type: 'EXPENSE',
+      amount: parseFloat(splitForm.amount),
+      description: `Repasse de Comissão - ${selectedPartnerForSplit.name}`,
+      status: 'PAID'
+    })
+    if (res.success) {
+      setIsPaySplitModalOpen(false)
+      setSelectedPartnerForSplit(null)
+      load()
+    } else {
+      alert(res.error)
+    }
+  }
+
 
 
   const handleBankSubmit = async (e: React.FormEvent) => {
@@ -228,8 +275,103 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
+      {/* Repasse de Parceiros */}
+      <section className={styles.partnersSection} style={{ marginTop: '2.5rem', marginBottom: '2.5rem' }}>
+        <h2 className={styles.sectionTitle} style={{ color: 'var(--gold-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          ✨ Repasse de Profissionais Parceiros (Clínica & Instituto)
+        </h2>
+        <Card style={{ background: 'var(--card-bg)', border: '1px solid var(--border-gold)', padding: '1.5rem', borderRadius: '12px' }}>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Profissional Parceiro</th>
+                  <th>E-mail</th>
+                  <th>Faturamento em Procedimentos</th>
+                  <th>Taxa de Comissão / Split</th>
+                  <th>Total de Comissão</th>
+                  <th>Total Pago</th>
+                  <th>Saldo Pendente de Repasse</th>
+                  <th style={{ textAlign: 'center' }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {partnerSplits.length === 0 ? (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum parceiro cadastrado ou com vendas.</td></tr>
+                ) : partnerSplits.map((partner: any) => (
+                  <tr key={partner.userId}>
+                    <td style={{ fontWeight: '600', color: 'var(--text-primary)' }}>👤 {partner.name}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{partner.email}</td>
+                    <td>{formatCurrency(partner.totalSalesValue)}</td>
+                    <td style={{ color: 'var(--gold-primary)', fontWeight: '600' }}>{partner.commissionPercent}%</td>
+                    <td style={{ color: 'var(--text-primary)' }}>{formatCurrency(partner.totalCommission)}</td>
+                    <td style={{ color: 'var(--success)' }}>{formatCurrency(partner.totalPaid)}</td>
+                    <td style={{ fontWeight: '700', color: partner.balanceDue > 0 ? 'var(--gold-primary)' : 'var(--text-primary)' }}>
+                      {formatCurrency(partner.balanceDue)}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <Button 
+                        disabled={partner.balanceDue <= 0}
+                        onClick={() => handlePaySplitClick(partner)}
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', borderRadius: '6px' }}
+                      >
+                        💸 Efetuar Repasse
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </section>
+
       {/* Modais */}
+      {isPaySplitModalOpen && selectedPartnerForSplit && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <Card>
+              <div className={styles.modalContent}>
+                <h2>Efetuar Repasse de Comissão</h2>
+                <p style={{ margin: '0.5rem 0 1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  Registrar pagamento de comissão para o profissional: <strong>{selectedPartnerForSplit.name}</strong>
+                </p>
+                <form onSubmit={handleSplitSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Conta Bancária de Origem</label>
+                    <select 
+                      className={styles.select}
+                      value={splitForm.bankId}
+                      onChange={(e) => setSplitForm({...splitForm, bankId: e.target.value})}
+                    >
+                      {banks.map((b: any) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <Input 
+                    label="Valor do Pagamento (R$)" 
+                    type="number" 
+                    step="0.01" 
+                    required 
+                    value={splitForm.amount}
+                    onChange={(e) => setSplitForm({...splitForm, amount: e.target.value})}
+                  />
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                    <Button type="button" variant="secondary" onClick={() => { setIsPaySplitModalOpen(false); setSelectedPartnerForSplit(null); }}>Cancelar</Button>
+                    <Button type="submit">Confirmar Pagamento</Button>
+                  </div>
+                </form>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {isTxModalOpen && (
+
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
             <Card>

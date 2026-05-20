@@ -1,59 +1,78 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
 
 :root {
-  --background: #fdfdfb; /* Very light cream/white */
+  /* ── Cores Principais ── */
+  --background: #fdfdfb;
   --foreground: #2d2d2d;
   --gold-primary: #d4af37;
   --gold-hover: #c4a02d;
   --gold-light: rgba(212, 175, 55, 0.1);
+  --gold-accent: #f0d060;
+
+  /* ── Superfícies ── */
   --panel-bg: rgba(255, 255, 255, 0.95);
   --card-bg: #ffffff;
-  --border-gold: rgba(212, 175, 55, 0.25);
-  --sidebar-w: 260px;
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
-  --shadow-md: 0 8px 24px rgba(212, 175, 55, 0.08);
-  
-  /* Aliases for warmer tones */
-  --text-primary: var(--foreground);
-  --text-secondary: #7a735a; /* Warm grey/gold mix */
-  --border-color: var(--border-gold);
-  --surface-card: var(--card-bg);
   --surface-hover: #fefcf5;
-  
+  --surface-card: var(--card-bg);
+
+  /* ── Bordas ── */
+  --border-gold: rgba(212, 175, 55, 0.25);
+  --border-color: var(--border-gold);
+
+  /* ── Textos ── */
+  --text-primary: var(--foreground);
+  --text-secondary: #7a735a;
+
+  /* ── Layout ── */
+  --sidebar-w: 260px;
   --mobile-header-h: 70px;
-  
-  --success: #2e7d32;
-  --error: #d32f2f;
-  --warning: #ed6c02;
-  --info: #0288d1;
+
+  /* ── Sombras ── */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(212, 175, 55, 0.08);
+  --shadow-lg: 0 16px 40px rgba(212, 175, 55, 0.12);
+
+  /* ── Status ── */
+  --success: #16a34a;
+  --success-bg: rgba(22, 163, 74, 0.08);
+  --error: #dc2626;
+  --error-bg: rgba(220, 38, 38, 0.08);
+  --warning: #d97706;
+  --warning-bg: rgba(217, 119, 6, 0.08);
+  --info: #0284c7;
+  --info-bg: rgba(2, 132, 199, 0.08);
 }
 
-/* Utilitário para tabelas responsivas */
-.tableContainer {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-bottom: 1rem;
-}
-
-.tableContainer table {
-  min-width: 600px; /* Garante que a tabela não esmague no celular */
-}
-
-* {
+/* ── Reset e Base ── */
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--background);
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(212, 175, 55, 0.02) 0px, transparent 50%);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.05) 0px, transparent 55%),
+    radial-gradient(at 100% 100%, rgba(212, 175, 55, 0.03) 0px, transparent 55%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings com Playfair para títulos especiais */
+h1, h2 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
 }
 
 a {
@@ -61,17 +80,54 @@ a {
   text-decoration: none;
 }
 
-/* Scrollbar elegante branco e dourado */
-::-webkit-scrollbar {
-  width: 8px;
+button, input, select, textarea {
+  font-family: inherit;
 }
+
+/* ── Scrollbar Elegante Dourado ── */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
 ::-webkit-scrollbar-track {
   background: var(--background);
 }
+
 ::-webkit-scrollbar-thumb {
-  background: var(--gold-primary);
-  border-radius: 4px;
+  background: rgba(212, 175, 55, 0.35);
+  border-radius: 6px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--gold-hover);
+  background: var(--gold-primary);
+}
+
+/* ── Utilitários Globais ── */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+}
+
+.tableContainer table {
+  min-width: 600px;
+}
+
+/* Animação global de fade-in para páginas */
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pageAnimation {
+  animation: pageIn 0.4s ease-out;
 }
