@@ -18,7 +18,11 @@ export async function loginAction(email: string, password: string) {
     if (!isMatch) return { error: 'Senha incorreta' }
 
     // Create session
-    const session = await encrypt({ userId: user.id, role: user.role })
+    const session = await encrypt({ 
+      userId: user.id, 
+      role: user.role,
+      permissions: user.permissions || ''
+    })
     
     // Save cookie
     const cookieStore = await cookies()

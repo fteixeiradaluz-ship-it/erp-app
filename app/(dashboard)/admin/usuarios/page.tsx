@@ -13,6 +13,29 @@ export default function UsuariosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
 
+  const DEFAULT_PERMISSIONS: Record<string, string> = {
+    ADMIN: 'dashboard,pos,agenda,envios,relatorios,clientes,fornecedores,estoque,precificacao,financeiro,contas-pagar,logs,usuarios,configuracoes',
+    SECRETARY: 'dashboard,pos,agenda,relatorios,clientes',
+    SELLER: 'dashboard,pos,envios,relatorios,clientes'
+  }
+
+  const modulesList = [
+    { token: 'dashboard', label: '📊 Dashboard' },
+    { token: 'pos', label: '🛒 Vendas (PDV)' },
+    { token: 'agenda', label: '📅 Agenda' },
+    { token: 'envios', label: '📦 Envios e Logística' },
+    { token: 'relatorios', label: '📈 Relatórios' },
+    { token: 'clientes', label: '👥 Clientes e Prontuários' },
+    { token: 'fornecedores', label: '🏭 Fornecedores' },
+    { token: 'estoque', label: '📦 Estoque' },
+    { token: 'precificacao', label: '🧮 Precificação' },
+    { token: 'financeiro', label: '💰 Financeiro (Caixa)' },
+    { token: 'contas-pagar', label: '💸 Contas a Pagar' },
+    { token: 'logs', label: '📜 Logs do Sistema' },
+    { token: 'usuarios', label: '🛡️ Gestão de Equipe (RH)' },
+    { token: 'configuracoes', label: '⚙️ Configurações' },
+  ]
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -24,7 +47,8 @@ export default function UsuariosPage() {
     phone: '',
     salary: '' as string | number,
     admissionDate: '',
-    position: ''
+    position: '',
+    permissions: 'dashboard,pos,envios,relatorios,clientes'
   })
 
   useEffect(() => {
@@ -52,7 +76,8 @@ export default function UsuariosPage() {
         phone: user.phone || '',
         salary: user.salary ?? '',
         admissionDate: user.admissionDate ? new Date(user.admissionDate).toISOString().split('T')[0] : '',
-        position: user.position || ''
+        position: user.position || '',
+        permissions: user.permissions || DEFAULT_PERMISSIONS[user.role] || ''
       })
     } else {
       setEditingUser(null)
@@ -66,7 +91,8 @@ export default function UsuariosPage() {
         phone: '',
         salary: '',
         admissionDate: '',
-        position: ''
+        position: '',
+        permissions: DEFAULT_PERMISSIONS.SELLER
       })
     }
     setIsModalOpen(true)
@@ -90,6 +116,17 @@ export default function UsuariosPage() {
     } else {
       alert(res.error)
     }
+  }
+
+  const togglePermission = (token: string) => {
+    const currentList = formData.permissions ? formData.permissions.split(',') : []
+    let newList
+    if (currentList.includes(token)) {
+      newList = currentList.filter(t => t !== token)
+    } else {
+      newList = [...currentList, token]
+    }
+    setFormData({ ...formData, permissions: newList.join(',') })
   }
 
   const handleDelete = async (id: string) => {
@@ -228,7 +265,14 @@ export default function UsuariosPage() {
                       <select 
                         className={styles.select}
                         value={formData.role}
-                        onChange={(e) => setFormData({...formData, role: e.target.value})}
+                        onChange={(e) => {
+                          const newRole = e.target.value
+                          setFormData({
+                            ...formData,
+                            role: newRole,
+                            permissions: DEFAULT_PERMISSIONS[newRole] || ''
+                          })
+                        }}
                       >
                         <option value="SELLER">Vendedor (PDV e Clientes)</option>
                         <option value="SECRETARY">Secretária (Agenda, PDV e Clientes)</option>
@@ -245,6 +289,60 @@ export default function UsuariosPage() {
                           <p>✅ Acesso: PDV, Clientes, Envios e Relatórios de Vendas.</p>
                         )}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Grid de Permissões Personalizadas */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
+                    <label style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--gold-primary)' }}>
+                      🔑 Permissões de Acesso Personalizadas
+                    </label>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Marque ou desmarque os módulos que este usuário poderá visualizar e gerenciar. Ao mudar o perfil acima, as permissões serão redefinidas para o padrão do perfil, mas você pode personalizá-las livremente.
+                    </p>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', 
+                      gap: '0.6rem', 
+                      padding: '1rem', 
+                      background: 'rgba(212,175,55,0.03)', 
+                      border: '1px solid var(--border-gold)', 
+                      borderRadius: '8px',
+                      maxHeight: '260px',
+                      overflowY: 'auto'
+                    }}>
+                      {modulesList.map(mod => {
+                        const isChecked = formData.permissions.split(',').includes(mod.token)
+                        return (
+                          <label key={mod.token} style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.6rem', 
+                            fontSize: '0.85rem', 
+                            cursor: 'pointer', 
+                            padding: '0.4rem 0.6rem', 
+                            borderRadius: '6px', 
+                            background: isChecked ? 'rgba(212,175,55,0.06)' : 'transparent',
+                            border: `1px solid ${isChecked ? 'rgba(212,175,55,0.15)' : 'transparent'}`,
+                            transition: 'all 0.15s' 
+                          }}>
+                            <input 
+                              type="checkbox" 
+                              checked={isChecked} 
+                              onChange={() => togglePermission(mod.token)}
+                              style={{ 
+                                accentColor: 'var(--gold-primary)',
+                                cursor: 'pointer',
+                                width: '15px',
+                                height: '15px'
+                              }}
+                            />
+                            <span style={{ color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isChecked ? '600' : 'normal' }}>
+                              {mod.label}
+                            </span>
+                          </label>
+                        )
+                      })}
                     </div>
                   </div>
 

@@ -57,6 +57,17 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
         <Button variant="secondary" onClick={() => router.back()}>Voltar</Button>
       </header>
 
+      {customer.generalNotes && (
+        <Card style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--gold-primary)' }}>
+          <div style={{ padding: '0.25rem' }}>
+            <h3 style={{ color: 'var(--gold-primary)', marginBottom: '0.5rem', fontSize: '1.1rem', margin: 0 }}>📝 Anotações Gerais do Paciente</h3>
+            <p style={{ whiteSpace: 'pre-wrap', margin: '0.5rem 0 0 0', fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.5' }}>
+              {customer.generalNotes}
+            </p>
+          </div>
+        </Card>
+      )}
+
       <div className={styles.recordsList}>
         {records.length === 0 ? (
           <div className={styles.empty}>Nenhum registro encontrado para este paciente.</div>

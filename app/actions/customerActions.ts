@@ -46,6 +46,7 @@ export async function upsertCustomer(data: {
   neighborhood?: string
   city?: string
   shippingNotes?: string
+  generalNotes?: string
 }) {
   const session = await getSession()
   if (!session) return { error: 'Não autorizado' }
@@ -63,6 +64,7 @@ export async function upsertCustomer(data: {
       neighborhood: data.neighborhood,
       city: data.city,
       shippingNotes: data.shippingNotes,
+      generalNotes: data.generalNotes,
     }
 
     if (data.id) {
@@ -81,6 +83,24 @@ export async function upsertCustomer(data: {
   } catch (err: any) {
     if (err.code === 'P2002') return { error: 'CPF já cadastrado' }
     return { error: 'Erro ao salvar cliente' }
+  }
+}
+
+export async function updateCustomerGeneralNotes(id: string, generalNotes: string) {
+  const session = await getSession()
+  if (!session) return { error: 'Não autorizado' }
+
+  try {
+    const customer = await prisma.customer.update({
+      where: { id },
+      data: { generalNotes }
+    })
+    revalidatePath(`/clientes/${id}`)
+    revalidatePath(`/clientes/${id}/prontuario`)
+    return { success: true, customer }
+  } catch (err: any) {
+    console.error(err)
+    return { error: 'Erro ao salvar as anotações gerais' }
   }
 }
 

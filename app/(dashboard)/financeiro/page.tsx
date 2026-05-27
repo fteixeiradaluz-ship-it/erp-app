@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import styles from './financeiro.module.css'
-import { getFinancialFlow, createManualTransaction, upsertBank, updateTransaction, deleteTransaction } from '@/app/actions/financialActions'
+import { getFinancialFlow, createManualTransaction, upsertBank, updateTransaction, deleteTransaction, getCashFlowForecast } from '@/app/actions/financialActions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -15,6 +15,12 @@ export default function FinanceiroPage() {
   const [loading, setLoading] = useState(true)
   const [isTxModalOpen, setIsTxModalOpen] = useState(false)
   const [isBankModalOpen, setIsBankModalOpen] = useState(false)
+
+  // Projection / Forecast states
+  const [financeTab, setFinanceTab] = useState<'realized' | 'forecast'>('realized')
+  const [forecastData, setForecastData] = useState<any[]>([])
+  const [forecastBase, setForecastBase] = useState(0)
+  const [forecastLoading, setForecastLoading] = useState(false)
 
   // Transaction Form State
   const [txForm, setTxForm] = useState({
@@ -46,6 +52,7 @@ export default function FinanceiroPage() {
   }, [])
 
   async function load() {
+    setLoading(true)
     const res = await getFinancialFlow()
     if (res.success) {
       setData(res)
@@ -53,6 +60,15 @@ export default function FinanceiroPage() {
         setTxForm(prev => ({ ...prev, bankId: res.banks[0].id }))
       }
     }
+    
+    // Carregar a projeção de fluxo de caixa futuro
+    setForecastLoading(true)
+    const forecastRes = await getCashFlowForecast()
+    if (forecastRes.success) {
+      setForecastData(forecastRes.projection)
+      setForecastBase(forecastRes.baseBalance)
+    }
+    setForecastLoading(false)
     setLoading(false)
   }
 
@@ -185,46 +201,147 @@ export default function FinanceiroPage() {
           ))}
         </div>
 
-        {/* Lado Direito: Fluxo de Caixa */}
+        {/* Lado Direito: Fluxo de Caixa Realizado ou Projetado */}
         <div className={styles.column}>
-          <h2 className={styles.sectionTitle}>Fluxo de Caixa (Últimas 50)</h2>
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Descrição</th>
-                  <th>Banco</th>
-                  <th>Valor</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>Nenhuma transação encontrada.</td></tr>
-                ) : transactions.map((t: any) => (
-                  <tr key={t.id} className={t.type === 'EXPENSE' ? styles.expenseRow : ''}>
-                    <td style={{ whiteSpace: 'nowrap' }}>{new Date(t.createdAt).toLocaleDateString()}</td>
-                    <td>{t.description}</td>
-                    <td>{t.bank.name}</td>
-                    <td className={t.type === 'INCOME' ? styles.income : styles.expense} style={{ whiteSpace: 'nowrap' }}>
-                      {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
-                    </td>
-                    <td>
-                      <span className={t.status === 'PAID' ? styles.statusPaid : styles.statusPending}>
-                        {t.status === 'PAID' ? '● PAGO' : '○ PENDENTE'}
-                      </span>
-                    </td>
-                    <td className={styles.actionsCell}>
-                      <button className={`${styles.actionBtn} ${styles.editBtn}`} title="Editar" onClick={() => handleEditClick(t)}>✏️</button>
-                      <button className={`${styles.actionBtn} ${styles.deleteBtn}`} title="Excluir" onClick={() => handleDeleteClick(t)}>🗑️</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '2px solid var(--border-gold)', paddingBottom: '0.6rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {financeTab === 'realized' ? '📊 Histórico Realizado (Últimas 50)' : '🔮 Projeção de Fluxo de Caixa (12 Meses)'}
+            </h2>
+            <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(212,175,55,0.03)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--border-gold)' }}>
+              <button 
+                onClick={() => setFinanceTab('realized')} 
+                style={{ 
+                  background: financeTab === 'realized' ? 'var(--gold-primary)' : 'transparent',
+                  color: financeTab === 'realized' ? '#000' : 'var(--text-secondary)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.8rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                Caixa Realizado
+              </button>
+              <button 
+                onClick={() => setFinanceTab('forecast')} 
+                style={{ 
+                  background: financeTab === 'forecast' ? 'var(--gold-primary)' : 'transparent',
+                  color: financeTab === 'forecast' ? '#000' : 'var(--text-secondary)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.8rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                Projeção Futura
+              </button>
+            </div>
           </div>
+
+          {financeTab === 'realized' ? (
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Banco</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'center' }}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.length === 0 ? (
+                    <tr><td colSpan={6} style={{ textAlign: 'center' }}>Nenhuma transação encontrada.</td></tr>
+                  ) : transactions.map((t: any) => (
+                    <tr key={t.id} className={t.type === 'EXPENSE' ? styles.expenseRow : ''}>
+                      <td style={{ whiteSpace: 'nowrap' }}>{new Date(t.createdAt).toLocaleDateString()}</td>
+                      <td>{t.description}</td>
+                      <td>{t.bank.name}</td>
+                      <td className={t.type === 'INCOME' ? styles.income : styles.expense} style={{ whiteSpace: 'nowrap' }}>
+                        {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
+                      </td>
+                      <td>
+                        <span className={t.status === 'PAID' ? styles.statusPaid : styles.statusPending}>
+                          {t.status === 'PAID' ? '● PAGO' : '○ PENDENTE'}
+                        </span>
+                      </td>
+                      <td className={styles.actionsCell}>
+                        <button className={`${styles.actionBtn} ${styles.editBtn}`} title="Editar" onClick={() => handleEditClick(t)}>✏️</button>
+                        <button className={`${styles.actionBtn} ${styles.deleteBtn}`} title="Excluir" onClick={() => handleDeleteClick(t)}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className={styles.tableWrapper}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 1rem 0', lineHeight: '1.4' }}>
+                Projeta a liquidez futura da clínica nos próximos 12 meses. Combina o saldo bancário consolidado atual (base: <strong>{formatCurrency(forecastBase)}</strong>) com parcelas a receber de cartões e despesas recorrentes/repasses provisionados a vencer.
+              </p>
+              <table className={styles.table}>
+                <thead>
+                  <tr style={{ background: 'rgba(212,175,55,0.06)', borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '0.8rem' }}>Mês de Referência</th>
+                    <th style={{ padding: '0.8rem' }}>Receitas Previstas</th>
+                    <th style={{ padding: '0.8rem' }}>Saídas Previstas</th>
+                    <th style={{ padding: '0.8rem' }}>Fluxo Líquido</th>
+                    <th style={{ padding: '0.8rem' }}>Saldo Final Projetado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {forecastLoading ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                        Calculando projeção financeira...
+                      </td>
+                    </tr>
+                  ) : forecastData.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                        Sem dados de projeção para o período.
+                      </td>
+                    </tr>
+                  ) : (
+                    forecastData.map((row, idx) => {
+                      const netFlowIsPositive = row.netFlow >= 0
+                      const balanceIsPositive = row.projectedBalance >= 0
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }}>
+                          <td style={{ fontWeight: 'bold', textTransform: 'capitalize', padding: '0.8rem' }}>{row.monthName}</td>
+                          <td style={{ color: 'var(--success)', fontWeight: '600', padding: '0.8rem' }}>+ {formatCurrency(row.income)}</td>
+                          <td style={{ color: 'var(--error)', fontWeight: '600', padding: '0.8rem' }}>- {formatCurrency(row.expense)}</td>
+                          <td style={{ 
+                            color: netFlowIsPositive ? 'var(--success)' : 'var(--error)', 
+                            fontWeight: 'bold',
+                            padding: '0.8rem'
+                          }}>
+                            {netFlowIsPositive ? '+' : '-'} {formatCurrency(Math.abs(row.netFlow))}
+                          </td>
+                          <td style={{ 
+                            color: balanceIsPositive ? 'var(--gold-primary)' : 'var(--error)', 
+                            fontWeight: 'bold',
+                            fontSize: '0.95rem',
+                            padding: '0.8rem',
+                            background: balanceIsPositive ? 'rgba(212,175,55,0.03)' : 'rgba(244,67,54,0.03)'
+                          }}>
+                            {formatCurrency(row.projectedBalance)}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -387,29 +504,44 @@ export default function FinanceiroPage() {
                     <thead>
                       <tr>
                         <th>Data</th>
-                        <th>Descrição</th>
+                        <th>Descrição Extrato</th>
                         <th>Valor</th>
-                        <th>Importar?</th>
+                        <th>Ação Proposta</th>
                       </tr>
                     </thead>
                     <tbody>
                       {importPreview.map((item, idx) => (
-                        <tr key={idx}>
+                        <tr key={idx} style={{ background: item.reconcileWithId ? 'rgba(212, 175, 55, 0.05)' : 'transparent' }}>
                           <td>{new Date(item.date).toLocaleDateString()}</td>
-                          <td>{item.description}</td>
+                          <td>
+                            <div style={{ fontWeight: '600' }}>{item.description}</div>
+                            {item.reconcileWithId && (
+                              <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--gold-primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                🔗 Conciliar com: <span style={{ textDecoration: 'underline' }}>{item.reconcileWithDesc}</span>
+                              </div>
+                            )}
+                          </td>
                           <td className={item.amount > 0 ? styles.income : styles.expense}>
                             {formatCurrency(item.amount)}
                           </td>
                           <td style={{ textAlign: 'center' }}>
-                            <input 
-                              type="checkbox" 
-                              defaultChecked 
-                              onChange={(e) => {
-                                const newPreview = [...importPreview]
-                                newPreview[idx].selected = e.target.checked
-                                setImportPreview(newPreview)
-                              }}
-                            />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', cursor: 'pointer', justifyContent: 'center' }}>
+                              <input 
+                                type="checkbox" 
+                                defaultChecked 
+                                onChange={(e) => {
+                                  const newPreview = [...importPreview]
+                                  newPreview[idx].selected = e.target.checked
+                                  setImportPreview(newPreview)
+                                }}
+                              />
+                              <span style={{ 
+                                fontWeight: 'bold', 
+                                color: item.reconcileWithId ? 'var(--gold-primary)' : 'inherit' 
+                              }}>
+                                {item.reconcileWithId ? 'Conciliar' : 'Lançar'}
+                              </span>
+                            </label>
                           </td>
                         </tr>
                       ))}

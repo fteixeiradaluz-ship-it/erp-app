@@ -81,3 +81,53 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media print {
+  /* Hide every single element of the dashboard layout */
+  body > div:first-child > aside,
+  body > div:first-child > header,
+  .container {
+    display: none !important;
+  }
+  
+  body > div:first-child > main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Overlay becomes full screen white background */
+  .modalOverlayPrint {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: white !important;
+    z-index: 99999 !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Only show the prescription A4 sheet */
+  .modalOverlayPrint .editorLayout {
+    display: none !important; /* Hide editor form during print */
+  }
+
+  .modalOverlayPrint .previewSheetPrint {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 210mm !important; /* Exact A4 Width */
+    height: 297mm !important; /* Exact A4 Height */
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 15mm 20mm !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    color: black !important;
+  }
+}

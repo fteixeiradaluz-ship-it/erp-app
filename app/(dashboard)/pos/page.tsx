@@ -1,19 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { getPOSData, submitSale } from '@/app/actions/saleActions'
 import { getSettings } from '@/app/actions/settingsActions'
+import { useSearchParams } from 'next/navigation'
 import styles from './pos.module.css'
 import rStyles from './receipt.module.css'
 
-type Product = { id: string; name: string; price: number; stock: number; }
+type Product = { id: string; name: string; price: number; stock: number; type: string; }
 type Customer = { id: string; name: string; }
 type CartItem = Product & { quantity: number; }
 
 export default function POSPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Carregando PDV...</div>}>
+      <POSPageContent />
+    </Suspense>
+  )
+}
+
+function POSPageContent() {
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
@@ -27,20 +36,63 @@ export default function POSPage() {
   const [saleResult, setSaleResult] = useState<any>(null)
   const [settings, setSettings] = useState<any>(null)
 
+  // Prepayment / Signal state from appointment
+  const [depositAmount, setDepositAmount] = useState(0)
+  const [depositMethod, setDepositMethod] = useState('')
+  const [appointmentId, setAppointmentId] = useState<string | null>(null)
+
+  const searchParams = useSearchParams()
+  const paramCustomerId = searchParams.get('customerId')
+  const paramAppointmentId = searchParams.get('appointmentId')
+
   useEffect(() => {
     Promise.all([getPOSData(), getSettings()]).then(([posData, settingsData]) => {
-      setProducts(posData.products)
+      const loadedProducts = (posData.products || []) as Product[]
+      setProducts(loadedProducts)
       setCustomers(posData.customers)
       if (settingsData.success) setSettings(settingsData.settings)
+      
+      // Auto-select customer from query param
+      if (paramCustomerId) {
+        setSelectedCustomer(paramCustomerId)
+      }
+      
       setLoading(false)
     })
-  }, [])
+  }, [paramCustomerId])
+
+  // Load appointment details for deposits if appointmentId exists
+  useEffect(() => {
+    if (paramAppointmentId) {
+      import('@/app/actions/appointmentActions').then(({ getAppointmentById }) => {
+        getAppointmentById(paramAppointmentId).then(res => {
+          if (res.success && res.appointment) {
+            setDepositAmount(res.appointment.depositAmount || 0)
+            setDepositMethod(res.appointment.depositMethod || '')
+            setAppointmentId(paramAppointmentId)
+          }
+        })
+      })
+    }
+  }, [paramAppointmentId])
+
+  // Auto-add service (Consulta) if faturando from Agenda
+  useEffect(() => {
+    if (products.length > 0 && paramAppointmentId && !loading) {
+      const serviceItem = products.find(p => p.type === 'SERVICE') || 
+                          products.find(p => p.name.toLowerCase().includes('consulta'))
+      
+      if (serviceItem && cart.length === 0) {
+        addToCart(serviceItem)
+      }
+    }
+  }, [products, paramAppointmentId, loading])
 
   const addToCart = (product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id)
       if (existing) {
-        if (existing.quantity >= product.stock) return prev; // Limit to stock
+        if (product.type !== 'SERVICE' && existing.quantity >= product.stock) return prev;
         return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
       }
       return [...prev, { ...product, quantity: 1 }]
@@ -49,6 +101,10 @@ export default function POSPage() {
 
   const removeFromCart = (id: string) => {
     setCart(prev => prev.filter(item => item.id !== id))
+  }
+
+  const updateCartItemPrice = (id: string, newPrice: number) => {
+    setCart(prev => prev.map(item => item.id === id ? { ...item, price: newPrice } : item))
   }
 
   const handleCheckout = async () => {
@@ -61,7 +117,9 @@ export default function POSPage() {
       paymentMethod,
       installments: paymentMethod === 'CARTAO' ? installments : 1,
       discount: (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') ? discount : 0,
-      items: cart.map(item => ({ productId: item.id, quantity: item.quantity, price: item.price }))
+      items: cart.map(item => ({ productId: item.id, quantity: item.quantity, price: item.price })),
+      depositApplied: depositAmount,
+      appointmentId: appointmentId || undefined
     })
 
     if (result.error) {
@@ -72,6 +130,9 @@ export default function POSPage() {
       setSelectedCustomer('')
       setDiscount(0)
       setInstallments(1)
+      setDepositAmount(0)
+      setDepositMethod('')
+      setAppointmentId(null)
     }
     setSubmitting(false)
   }
@@ -86,28 +147,43 @@ export default function POSPage() {
 
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0)
   const discountValue = (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') ? (subtotal * (discount / 100)) : 0
-  const total = subtotal - discountValue
+  const netAmount = subtotal - discountValue
+  
+  // Deduct deposit signals paid
+  const total = Math.max(0, netAmount - depositAmount)
 
-  if (loading) return <div>Carregando PDV...</div>
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Carregando PDV...</div>
 
   return (
     <div className={styles.container}>
       <div className={styles.productsArea}>
-        <h2 className={styles.areaTitle}>Produtos</h2>
+        <h2 className={styles.areaTitle}>Serviços e Produtos</h2>
         <div className={styles.productGrid}>
           {products.map(p => (
             <Card key={p.id} className={styles.productCard}>
-              <h3>{p.name}</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <h3 style={{ margin: 0 }}>{p.name}</h3>
+                <span style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: 'bold', 
+                  padding: '0.15rem 0.4rem', 
+                  borderRadius: '4px',
+                  background: p.type === 'SERVICE' ? 'rgba(212, 175, 55, 0.15)' : '#eee',
+                  color: p.type === 'SERVICE' ? 'var(--gold-hover)' : '#666'
+                }}>
+                  {p.type === 'SERVICE' ? '🩺 Serviço' : '📦 Produto'}
+                </span>
+              </div>
               <p className={styles.price}>R$ {p.price.toFixed(2)}</p>
-              <p className={`${styles.stock} ${p.stock <= 0 ? styles.stockEmpty : p.stock <= 5 ? styles.stockLow : ''}`}>
-                Estoque: {p.stock} {p.stock <= 0 ? ' (Esgotado)' : p.stock <= 5 ? ' (Baixo)' : ''}
+              <p className={`${styles.stock} ${p.type === 'SERVICE' ? '' : p.stock <= 0 ? styles.stockEmpty : p.stock <= 5 ? styles.stockLow : ''}`}>
+                {p.type === 'SERVICE' ? '✨ Atendimento Ilimitado' : `Estoque: ${p.stock} ${p.stock <= 0 ? ' (Esgotado)' : p.stock <= 5 ? ' (Baixo)' : ''}`}
               </p>
-              <Button onClick={() => addToCart(p)} disabled={p.stock <= 0} style={{width: '100%', marginTop: '1rem'}}>
+              <Button onClick={() => addToCart(p)} disabled={p.type !== 'SERVICE' && p.stock <= 0} style={{width: '100%', marginTop: '1rem'}}>
                 Adicionar
               </Button>
             </Card>
           ))}
-          {products.length === 0 && <p>Nenhum produto cadastrado.</p>}
+          {products.length === 0 && <p>Nenhum item cadastrado.</p>}
         </div>
       </div>
 
@@ -119,7 +195,26 @@ export default function POSPage() {
               <div key={item.id} className={styles.cartItem}>
                 <div className={styles.cartItemInfo}>
                   <p>{item.name}</p>
-                  <span>{item.quantity}x R$ {item.price.toFixed(2)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem' }}>
+                    <span>{item.quantity}x R$ </span>
+                    <input 
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.price}
+                      onChange={(e) => updateCartItemPrice(item.id, Number(e.target.value))}
+                      style={{
+                        width: '90px',
+                        padding: '0.2rem 0.4rem',
+                        border: '1px solid var(--border-gold)',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        background: '#fff'
+                      }}
+                    />
+                  </div>
                 </div>
                 <button onClick={() => removeFromCart(item.id)} className={styles.removeBtn}>✕</button>
               </div>
@@ -183,8 +278,14 @@ export default function POSPage() {
               <span>- R$ {discountValue.toFixed(2)}</span>
             </div>
           )}
+          {depositAmount > 0 && (
+            <div className={styles.totalRow} style={{ color: '#4caf50' }}>
+              <span>Sinal Já Pago:</span>
+              <span>- R$ {depositAmount.toFixed(2)} ({depositMethod})</span>
+            </div>
+          )}
           <div className={styles.totalRow}>
-            <span>TOTAL:</span>
+            <span>TOTAL A COBRAR:</span>
             <span className={styles.totalAmount}>R$ {total.toFixed(2)}</span>
           </div>
 
@@ -193,7 +294,7 @@ export default function POSPage() {
             onClick={handleCheckout} 
             disabled={submitting || cart.length === 0 || !selectedCustomer}
           >
-            {submitting ? 'Processando...' : 'Finalizar Venda'}
+            {submitting ? 'Processando...' : 'Finalizar Faturamento'}
           </Button>
         </Card>
       </div>
@@ -247,8 +348,14 @@ export default function POSPage() {
               </table>
 
               <div className={rStyles.totalSection}>
+                {depositAmount > 0 && (
+                  <div className={rStyles.totalRow} style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.25rem' }}>
+                    <span>Sinal Já Pago:</span>
+                    <span>R$ {depositAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className={rStyles.totalRow}>
-                  <span>TOTAL:</span>
+                  <span>TOTAL FATURADO:</span>
                   <span>R$ {saleResult.totalAmount.toFixed(2)}</span>
                 </div>
                 <p style={{fontSize: '0.8rem', marginTop: '0.5rem'}}>

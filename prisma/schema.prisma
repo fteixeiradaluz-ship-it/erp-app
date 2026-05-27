@@ -22,6 +22,7 @@ model User {
   salary             Float?
   admissionDate      DateTime?
   position           String?
+  permissions        String     @default("")
   commissionPercent  Float?     // Nullable to fallback to global Settings.commissionPercentage if needed
   sales              Sale[]
   logs               AuditLog[]
@@ -41,6 +42,7 @@ model Customer {
   neighborhood    String?   // Bairro
   city            String?   // Cidade
   shippingNotes   String?   @db.Text // Observações para envio
+  generalNotes    String?   @db.Text // Anotações gerais do prontuário
   sales           Sale[]
   appointments    Appointment[]
   medicalRecords  MedicalRecord[]
@@ -56,6 +58,7 @@ model Product {
   price      Float
   cost       Float
   stock      Int
+  type       String    @default("PRODUCT") // PRODUCT or SERVICE
   saleItems  SaleItem[]
   supplierId String?
   supplier   Supplier? @relation(fields: [supplierId], references: [id])
@@ -168,6 +171,8 @@ model Appointment {
   status          String      @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
   isReturn        Boolean     @default(false)
   isBlocked       Boolean     @default(false) // New field for blocking slots
+  depositAmount   Float       @default(0)     // Valor de entrada / sinal
+  depositMethod   String?                     // Forma de pagamento do sinal (PIX, CARTAO)
   
   // Self-relation to link a return appointment back to its original appointment
   originalApptId  String?

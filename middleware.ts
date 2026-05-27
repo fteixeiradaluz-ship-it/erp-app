@@ -29,20 +29,49 @@ export async function middleware(request: NextRequest) {
          return NextResponse.redirect(new URL('/dashboard', request.url))
       }
 
-      // SELLER role constraints
-      if (session.role === 'SELLER') {
-         const blockedRoutes = ['/admin', '/financeiro', '/estoque', '/precificacao', '/fornecedores', '/configuracoes', '/consultas']
-         if (blockedRoutes.some(route => pathname.startsWith(route))) {
-             return NextResponse.redirect(new URL('/pos', request.url))
-         }
+      // Route to permission token mapping
+      const routePermissionMap = [
+        { prefix: '/admin/logs', token: 'logs' },
+        { prefix: '/admin/usuarios', token: 'usuarios' },
+        { prefix: '/dashboard', token: 'dashboard' },
+        { prefix: '/pos', token: 'pos' },
+        { prefix: '/agenda', token: 'agenda' },
+        { prefix: '/envios', token: 'envios' },
+        { prefix: '/relatorios', token: 'relatorios' },
+        { prefix: '/clientes', token: 'clientes' },
+        { prefix: '/fornecedores', token: 'fornecedores' },
+        { prefix: '/estoque', token: 'estoque' },
+        { prefix: '/precificacao', token: 'precificacao' },
+        { prefix: '/financeiro', token: 'financeiro' },
+        { prefix: '/contas-pagar', token: 'contas-pagar' },
+        { prefix: '/configuracoes', token: 'configuracoes' },
+      ]
+
+      let userPermissions = session.permissions || ''
+      
+      // Fallback to default role permissions if empty
+      if (!userPermissions) {
+        if (session.role === 'ADMIN') {
+          userPermissions = 'dashboard,pos,agenda,envios,relatorios,clientes,fornecedores,estoque,precificacao,financeiro,contas-pagar,logs,usuarios,configuracoes'
+        } else if (session.role === 'SECRETARY') {
+          userPermissions = 'dashboard,pos,agenda,relatorios,clientes'
+        } else {
+          userPermissions = 'dashboard,pos,envios,relatorios,clientes'
+        }
       }
 
-      // SECRETARY role constraints
-      if (session.role === 'SECRETARY') {
-         const blockedRoutes = ['/admin', '/financeiro', '/estoque', '/precificacao', '/fornecedores', '/configuracoes', '/contas-pagar']
-         if (blockedRoutes.some(route => pathname.startsWith(route))) {
-             return NextResponse.redirect(new URL('/dashboard', request.url))
-         }
+      // Check access
+      if (session.role !== 'ADMIN') {
+        const matched = routePermissionMap.find(item => pathname.startsWith(item.prefix))
+        if (matched) {
+          const allowedTokens = userPermissions.split(',')
+          if (!allowedTokens.includes(matched.token)) {
+            // Find first allowed prefix to redirect to
+            const firstAllowed = routePermissionMap.find(item => allowedTokens.includes(item.token))
+            const redirectUrl = firstAllowed ? firstAllowed.prefix : '/pos'
+            return NextResponse.redirect(new URL(redirectUrl, request.url))
+          }
+        }
       }
     } catch (error) {
       if (pathname !== '/login') {

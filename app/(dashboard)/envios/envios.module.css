@@ -164,8 +164,246 @@
   accent-color: var(--gold-primary);
 }
 
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.calendarArea {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: sticky;
+  top: 2rem;
+}
+
+.calendarCard {
+  padding: 1.5rem;
+  background: var(--surface-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.calendarNavBtn {
+  background: transparent;
+  border: 1px solid var(--border-gold);
+  color: var(--gold-primary);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.calendarNavBtn:hover {
+  background: var(--gold-primary);
+  color: #fff;
+  border-color: var(--gold-primary);
+}
+
+.calendarSelectors {
+  display: flex;
+  gap: 0.4rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.calendarSelect {
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-gold);
+  background: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--foreground);
+  outline: none;
+  cursor: pointer;
+}
+
+.calendarSelect:focus {
+  border-color: var(--gold-primary);
+}
+
+.weekdaysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.4rem;
+}
+
+.calendarCell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  transition: all 0.2s ease;
+}
+
+.calendarCell:hover:not(.emptyCell) {
+  background: var(--gold-light);
+  transform: scale(1.05);
+}
+
+.currentMonthDay {
+  font-weight: 600;
+}
+
+.otherMonthDay {
+  color: #ccc;
+  opacity: 0.5;
+}
+
+.selectedDay {
+  background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-hover) 100%) !important;
+  color: #000 !important;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+}
+
+.today {
+  border: 1.5px solid var(--gold-primary);
+  color: var(--gold-hover);
+}
+
+.selectedDay.today {
+  border-color: transparent;
+}
+
+.hasSalesDot {
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--gold-primary);
+}
+
+.selectedDay .hasSalesDot {
+  background-color: #000;
+}
+
+.listArea {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.selectedDateTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-gold);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.loading, .empty {
+  padding: 3rem;
+  text-align: center;
+  color: var(--text-secondary);
+  background: var(--surface-card);
+  border-radius: 12px;
+  border: 1px dashed var(--border-gold);
+  font-weight: 500;
+}
+
+@media (max-width: 1024px) {
+  .layoutGrid {
+    grid-template-columns: 1fr;
+  }
+  .calendarArea {
+    position: static;
+  }
+}
+
 @media (max-width: 768px) {
   .salesGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  /* Hide all dashboard layout elements */
+  body > div:first-child > aside,
+  body > div:first-child > header,
+  body > div:first-child > main > div > header,
+  body > div:first-child > main > div > div {
+    display: none !important;
+  }
+  
+  /* Make sure the main content is full width */
+  body > div:first-child > main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  
+  /* Print Modal full size and visible */
+  .modalOverlay {
+    position: absolute !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  .reportModal {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  
+  /* Hide buttons during print */
+  .reportModal button,
+  .reportModal select,
+  .reportModal input {
+    display: none !important;
   }
 }

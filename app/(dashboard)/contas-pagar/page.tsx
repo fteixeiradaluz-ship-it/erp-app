@@ -22,7 +22,8 @@ export default function ContasAPagarPage() {
     amount: '',
     bankId: '',
     installments: '1',
-    firstDueDate: ''
+    firstDueDate: '',
+    isRecurring: false
   })
 
   useEffect(() => {
@@ -50,14 +51,15 @@ export default function ContasAPagarPage() {
       amount: parseFloat(form.amount),
       bankId: form.bankId,
       installments: parseInt(form.installments, 10),
-      firstDueDate: new Date(form.firstDueDate)
+      firstDueDate: new Date(form.firstDueDate),
+      isRecurring: form.isRecurring
     })
 
     if (res.success) {
       setIsModalOpen(false)
       setEditingPayable(null)
       load()
-      setForm({ description: '', amount: '', bankId: banks[0]?.id || '', installments: '1', firstDueDate: '' })
+      setForm({ description: '', amount: '', bankId: banks[0]?.id || '', installments: '1', firstDueDate: '', isRecurring: false })
     } else {
       alert(res.error)
     }
@@ -108,7 +110,7 @@ export default function ContasAPagarPage() {
         <h1>💸 Contas a Pagar</h1>
         <Button onClick={() => {
           setEditingPayable(null)
-          setForm({ description: '', amount: '', bankId: banks[0]?.id || '', installments: '1', firstDueDate: '' })
+          setForm({ description: '', amount: '', bankId: banks[0]?.id || '', installments: '1', firstDueDate: '', isRecurring: false })
           setIsModalOpen(true)
         }}>+ Novo Lançamento</Button>
       </header>
@@ -168,7 +170,8 @@ export default function ContasAPagarPage() {
                             amount: t.amount.toString(),
                             bankId: t.bankId,
                             installments: '1',
-                            firstDueDate: new Date(t.dueDate).toISOString().split('T')[0]
+                            firstDueDate: new Date(t.dueDate).toISOString().split('T')[0],
+                            isRecurring: false
                           })
                           setIsModalOpen(true)
                         }}>✏️</Button>
@@ -205,13 +208,33 @@ export default function ContasAPagarPage() {
                     onChange={(e) => setForm({...form, amount: e.target.value})}
                   />
                   
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.2rem 0' }}>
+                    <input 
+                      type="checkbox"
+                      id="isRecurring"
+                      checked={form.isRecurring || false}
+                      disabled={!!editingPayable}
+                      onChange={(e) => {
+                        setForm({
+                          ...form,
+                          isRecurring: e.target.checked,
+                          installments: e.target.checked ? '1' : form.installments
+                        })
+                      }}
+                      style={{ accentColor: 'var(--gold-primary)', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="isRecurring" style={{ fontSize: '0.85rem', cursor: 'pointer', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                      🔁 Despesa Fixa Recorrente (Criar cobrança mensal automática de 2 anos)
+                    </label>
+                  </div>
+
                   <div style={{ display: 'flex', gap: '1rem' }}>
                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                        <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Parcelado em</label>
                        <select 
-                         style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
+                         style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)', opacity: form.isRecurring ? 0.5 : 1 }}
                          value={form.installments}
-                         disabled={!!editingPayable}
+                         disabled={!!editingPayable || form.isRecurring}
                          onChange={(e) => setForm({...form, installments: e.target.value})}
                        >
                          {Array.from({ length: 24 }).map((_, i) => (

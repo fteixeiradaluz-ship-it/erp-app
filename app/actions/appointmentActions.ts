@@ -11,6 +11,8 @@ export async function createAppointment(data: {
   isReturn?: boolean;
   originalApptId?: string;
   isBlocked?: boolean;
+  depositAmount?: number;
+  depositMethod?: string;
 }) {
   const session = await getSession();
   if (!session || (session.role !== 'ADMIN' && session.role !== 'SECRETARY')) {
@@ -18,15 +20,52 @@ export async function createAppointment(data: {
   }
 
   try {
-    const appointment = await prisma.appointment.create({
-      data: {
-        customerId: data.customerId || null,
-        date: data.date,
-        description: data.description,
-        isReturn: data.isReturn || false,
-        originalApptId: data.originalApptId,
-        isBlocked: data.isBlocked || false,
-      },
+    const appointment = await prisma.$transaction(async (tx: any) => {
+      // 1. Criar o agendamento
+      const newAppt = await tx.appointment.create({
+        data: {
+          customerId: data.customerId || null,
+          date: data.date,
+          description: data.description,
+          isReturn: data.isReturn || false,
+          originalApptId: data.originalApptId,
+          isBlocked: data.isBlocked || false,
+          depositAmount: data.depositAmount || 0,
+          depositMethod: data.depositMethod || null,
+        },
+        include: {
+          customer: true
+        }
+      });
+
+      // 2. Se houver sinal/entrada, lança transação de receita
+      if (data.depositAmount && data.depositAmount > 0 && data.customerId) {
+        let bank = await tx.bank.findFirst();
+        if (!bank) {
+          bank = await tx.bank.create({
+            data: { name: 'Caixa Geral', balance: 0 }
+          });
+        }
+
+        await tx.transaction.create({
+          data: {
+            bankId: bank.id,
+            type: 'INCOME',
+            amount: data.depositAmount,
+            description: `Sinal Agendamento - ${newAppt.customer?.name || 'Cliente'}`,
+            status: 'PAID',
+            payDate: new Date(),
+            dueDate: new Date(),
+          }
+        });
+
+        await tx.bank.update({
+          where: { id: bank.id },
+          data: { balance: { increment: data.depositAmount } }
+        });
+      }
+
+      return newAppt;
     });
     
     revalidatePath("/dashboard");
@@ -130,5 +169,23 @@ export async function deleteAppointment(id: string) {
   } catch (error) {
     console.error("Error deleting appointment:", error);
     return { success: false, error: "Falha ao remover consulta." };
+  }
+}
+
+export async function getAppointmentById(id: string) {
+  const session = await getSession();
+  if (!session) return { success: false, error: "Não autorizado" };
+
+  try {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+      },
+    });
+    return { success: true, appointment };
+  } catch (error) {
+    console.error("Error fetching appointment by id:", error);
+    return { success: false, error: "Falha ao buscar consulta." };
   }
 }

@@ -23,6 +23,7 @@ export async function getUsers() {
         admissionDate: true,
         position: true,
         commissionPercent: true,
+        permissions: true,
         createdAt: true
       },
       orderBy: { createdAt: 'desc' }
@@ -44,7 +45,8 @@ export async function upsertUser(data: {
   phone?: string | null,
   salary?: number | null,
   admissionDate?: string | Date | null,
-  position?: string | null
+  position?: string | null,
+  permissions?: string
 }) {
   const session = await getSession()
   if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
@@ -60,7 +62,8 @@ export async function upsertUser(data: {
         phone: data.phone,
         salary: data.salary,
         admissionDate: data.admissionDate ? new Date(data.admissionDate) : null,
-        position: data.position
+        position: data.position,
+        permissions: data.permissions ?? ''
       }
       if (data.password) {
         updateData.password = await bcrypt.hash(data.password, 10)
@@ -83,7 +86,8 @@ export async function upsertUser(data: {
           phone: data.phone,
           salary: data.salary,
           admissionDate: data.admissionDate ? new Date(data.admissionDate) : null,
-          position: data.position
+          position: data.position,
+          permissions: data.permissions ?? ''
         }
       })
     }

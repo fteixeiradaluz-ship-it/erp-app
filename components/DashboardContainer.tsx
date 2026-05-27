@@ -7,11 +7,13 @@ import styles from '@/app/(dashboard)/dashboard.module.css'
 export default function DashboardContainer({ 
   children, 
   role, 
+  permissions,
   logo,
   companyName
 }: { 
   children: React.ReactNode, 
   role: string, 
+  permissions: string,
   logo?: string | null,
   companyName: string
 }) {
@@ -39,6 +41,7 @@ export default function DashboardContainer({
 
       <Sidebar 
         role={role} 
+        permissions={permissions}
         logo={logo} 
         companyName={companyName}
         isOpen={isSidebarOpen} 

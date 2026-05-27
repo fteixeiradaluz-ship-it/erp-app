@@ -9,6 +9,8 @@ export async function submitSale(data: {
   installments?: number;
   discount?: number; // Percentual
   items: { productId: string, quantity: number, price: number }[];
+  depositApplied?: number;
+  appointmentId?: string;
 }) {
   const session = await getSession();
   if (!session) return { error: 'Não autorizado' };
@@ -20,7 +22,7 @@ export async function submitSale(data: {
     }
 
     const discountAmount = data.discount ? (subtotal * (data.discount / 100)) : 0;
-    const totalAmount = subtotal - discountAmount;
+    const totalAmount = Math.max(0, subtotal - discountAmount - (data.depositApplied || 0));
 
     const sale = await prisma.$transaction(async (tx: any) => {
       // 1. Criar a Venda
@@ -42,12 +44,25 @@ export async function submitSale(data: {
         }
       });
 
-      // 2. Deduzir do Estoque
+      // 2. Deduzir do Estoque e calcular base de comissão com dedução de custos
+      let totalCommissionableAmount = 0;
       for (const item of data.items) {
-        await tx.product.update({
+        const p = await tx.product.findUnique({
           where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } }
+          select: { type: true, cost: true, price: true }
         });
+        if (p) {
+          const productCost = p.cost || 0;
+          const netItemPrice = Math.max(0, item.price - productCost);
+          totalCommissionableAmount += netItemPrice * item.quantity;
+
+          if (p.type === 'PRODUCT') {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity } }
+            });
+          }
+        }
       }
 
       // 3. Inserir no Financeiro
@@ -69,6 +84,38 @@ export async function submitSale(data: {
           dueDate: data.paymentMethod === 'CARTAO' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : new Date(),
         }
       });
+
+      // Calcular e lançar repasse de comissão do profissional
+      const seller = await tx.user.findUnique({
+        where: { id: session.userId },
+        select: { name: true, commissionPercent: true }
+      });
+      const settings = await tx.settings.findFirst();
+      const globalComm = settings ? (settings.commissionPercentage || 0) : 0;
+      const commissionPercent = seller ? (seller.commissionPercent !== null ? seller.commissionPercent : globalComm) : globalComm;
+
+      const discountPercent = data.discount || 0;
+      const discountedCommissionable = totalCommissionableAmount * (1 - discountPercent / 100);
+      const commissionAmount = discountedCommissionable * (commissionPercent / 100);
+
+      if (commissionAmount > 0) {
+        const nextMonthDate = new Date();
+        nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+        nextMonthDate.setDate(5);
+        nextMonthDate.setHours(0, 0, 0, 0);
+
+        await tx.transaction.create({
+          data: {
+            bankId: bank.id,
+            type: 'EXPENSE',
+            amount: commissionAmount,
+            description: `Repasse Profissional: Comissão Venda #${newSale.id.slice(0, 6)} - ${seller?.name || 'Vendedor'}`,
+            status: 'PENDING',
+            dueDate: nextMonthDate,
+            payDate: null
+          }
+        });
+      }
       
       // Update bank balance if PAID
       if (data.paymentMethod !== 'CARTAO') {
@@ -106,7 +153,7 @@ export async function getPOSData() {
   });
   const products = await prisma.product.findMany({ 
     where: { deletedAt: null },
-    select: { id: true, name: true, price: true, stock: true }
+    select: { id: true, name: true, price: true, stock: true, type: true }
   });
   return { customers, products };
 }
@@ -134,12 +181,18 @@ export async function deleteSale(id: string, reason: string) {
         }
       });
 
-      // 2. Revert stock
+      // 2. Revert stock (apenas se for PRODUTO)
       for (const item of sale.items) {
-        await tx.product.update({
+        const p = await tx.product.findUnique({
           where: { id: item.productId },
-          data: { stock: { increment: item.quantity } }
+          select: { type: true }
         });
+        if (p && p.type === 'PRODUCT') {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } }
+          });
+        }
       }
 
       // 3. Find and soft-delete associated transaction

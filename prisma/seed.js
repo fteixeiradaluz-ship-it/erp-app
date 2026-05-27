@@ -26,7 +26,8 @@ async function main() {
       name: 'Notebook Premium Delta',
       price: 4500.0,
       cost: 3200.0,
-      stock: 10
+      stock: 10,
+      type: 'PRODUCT'
     }
   })
 
@@ -38,7 +39,35 @@ async function main() {
       name: 'Mouse Gamer Titan',
       price: 250.0,
       cost: 120.0,
-      stock: 25
+      stock: 25,
+      type: 'PRODUCT'
+    }
+  })
+
+  // Create some services
+  await prisma.product.upsert({
+    where: { id: 's1' },
+    update: {},
+    create: {
+      id: 's1',
+      name: 'Consulta Estética',
+      price: 300.0,
+      cost: 0.0,
+      stock: 9999,
+      type: 'SERVICE'
+    }
+  })
+
+  await prisma.product.upsert({
+    where: { id: 's2' },
+    update: {},
+    create: {
+      id: 's2',
+      name: 'Limpeza de Pele Premium',
+      price: 200.0,
+      cost: 50.0,
+      stock: 9999,
+      type: 'SERVICE'
     }
   })
 

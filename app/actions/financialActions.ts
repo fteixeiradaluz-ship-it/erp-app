@@ -210,7 +210,8 @@ export async function createPayableInstallments(data: {
     amount: number,
     description: string,
     installments: number,
-    firstDueDate: Date
+    firstDueDate: Date,
+    isRecurring?: boolean
 }) {
     const session = await getSession()
     if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
@@ -233,21 +234,24 @@ export async function createPayableInstallments(data: {
         }
     }
 
-    if (data.installments < 1) return { error: 'Número de parcelas inválido' }
+    if (!data.isRecurring && data.installments < 1) return { error: 'Número de parcelas inválido' }
 
     try {
-        const baseAmount = Math.floor((data.amount / data.installments) * 100) / 100
-        let remaining = data.amount - (baseAmount * data.installments)
+        const installmentsCount = data.isRecurring ? 24 : data.installments
+        const baseAmount = data.isRecurring ? data.amount : (Math.floor((data.amount / installmentsCount) * 100) / 100)
+        let remaining = data.isRecurring ? 0 : (data.amount - (baseAmount * installmentsCount))
 
         await prisma.$transaction(async (tx) => {
-            for (let i = 0; i < data.installments; i++) {
+            for (let i = 0; i < installmentsCount; i++) {
                 const dueDate = new Date(data.firstDueDate)
                 dueDate.setMonth(dueDate.getMonth() + i)
                 
-                // Add remaining cents to the last installment
-                const installmentAmount = (i === data.installments - 1) ? baseAmount + remaining : baseAmount
+                // Add remaining cents to the last installment if not recurring
+                const installmentAmount = (!data.isRecurring && i === installmentsCount - 1) ? baseAmount + remaining : baseAmount
 
-                const desc = data.installments > 1 ? `${data.description} (Parcela ${i + 1}/${data.installments})` : data.description
+                const desc = data.isRecurring
+                  ? `${data.description} (Fixo - ${dueDate.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })})`
+                  : (data.installments > 1 ? `${data.description} (Parcela ${i + 1}/${data.installments})` : data.description)
 
                 await tx.transaction.create({
                     data: {
@@ -265,9 +269,9 @@ export async function createPayableInstallments(data: {
         
         await createAuditLog(
             session.userId, 
-            'CREATE_PAYABLE', 
+            data.isRecurring ? 'CREATE_RECURRING_PAYABLE' : 'CREATE_PAYABLE', 
             'Transaction', 
-            { amount: data.amount, description: data.description, installments: data.installments }
+            { amount: data.amount, description: data.description, isRecurring: data.isRecurring, installments: data.installments }
         )
 
         revalidatePath('/contas-pagar')
@@ -468,4 +472,69 @@ export async function updateTransaction(id: string, data: any, reason: string) {
     } catch (err: any) {
         return { error: err.message || 'Erro ao atualizar transação' }
     }
+}
+
+export async function getCashFlowForecast() {
+  const session = await getSession()
+  if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+
+  try {
+    const now = new Date()
+    const currentBank = await prisma.bank.findFirst()
+    const baseBalance = currentBank ? currentBank.balance : 0
+
+    // Fetch all pending transactions (both Income and Expense) with a due date
+    const pendingTransactions = await prisma.transaction.findMany({
+      where: {
+        status: 'PENDING',
+        deletedAt: null,
+        dueDate: { not: null }
+      },
+      orderBy: { dueDate: 'asc' }
+    })
+
+    // Project month-by-month for 12 months ahead
+    const projection: any[] = []
+    let rollingBalance = baseBalance
+
+    for (let i = 0; i < 12; i++) {
+      const monthDate = new Date()
+      monthDate.setMonth(now.getMonth() + i)
+      const year = monthDate.getFullYear()
+      const month = monthDate.getMonth() // 0-indexed
+
+      // Start/end dates of the target month
+      const startOfMonth = new Date(year, month, 1)
+      const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999)
+
+      // Filter transactions for this month
+      const monthTxs = pendingTransactions.filter(t => {
+        const d = new Date(t.dueDate!)
+        return d >= startOfMonth && d <= endOfMonth
+      })
+
+      const income = monthTxs
+        .filter(t => t.type === 'INCOME')
+        .reduce((acc, t) => acc + t.amount, 0)
+
+      const expense = monthTxs
+        .filter(t => t.type === 'EXPENSE')
+        .reduce((acc, t) => acc + t.amount, 0)
+
+      const netFlow = income - expense
+      rollingBalance += netFlow
+
+      projection.push({
+        monthName: monthDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+        income,
+        expense,
+        netFlow,
+        projectedBalance: rollingBalance
+      })
+    }
+
+    return { success: true, baseBalance, projection }
+  } catch (err: any) {
+    return { error: 'Erro ao calcular projeção de fluxo de caixa: ' + err.message }
+  }
 }

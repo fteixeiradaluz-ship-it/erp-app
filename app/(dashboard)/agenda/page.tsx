@@ -4,33 +4,54 @@ import { useEffect, useState } from "react";
 import styles from "./agenda.module.css";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { getAppointments, createAppointment, updateAppointmentStatus, blockSlot } from "@/app/actions/appointmentActions";
+import { Input } from "@/components/ui/Input";
+import { getAppointments, createAppointment, updateAppointmentStatus } from "@/app/actions/appointmentActions";
 import { getCustomers } from "@/app/actions/customerActions";
 import Link from "next/link";
 
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8:00 to 18:00
 
 export default function AgendaPage() {
+  const today = new Date();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [monthlyAppointments, setMonthlyAppointments] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  
+
+  // Calendar Navigation
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
+
+  const months = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  // Years from 2024 to 2035
+  const years = Array.from({ length: 12 }, (_, i) => 2024 + i);
+
   // New Appt Form
   const [formData, setFormData] = useState({
     customerId: "",
     description: "",
     isReturn: false,
-    isBlocked: false
+    isBlocked: false,
+    depositAmount: 0,
+    depositMethod: "PIX"
   });
 
   useEffect(() => {
-    fetchData();
+    fetchDailyData();
   }, [selectedDate]);
 
-  async function fetchData() {
+  useEffect(() => {
+    fetchMonthlyData();
+  }, [currentYear, currentMonth]);
+
+  async function fetchDailyData() {
     setLoading(true);
     const start = new Date(selectedDate);
     start.setHours(0, 0, 0, 0);
@@ -47,6 +68,16 @@ export default function AgendaPage() {
     setLoading(false);
   }
 
+  async function fetchMonthlyData() {
+    const start = new Date(currentYear, currentMonth, 1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(currentYear, currentMonth + 1, 0);
+    end.setHours(23, 59, 59, 999);
+
+    const apptRes = await getAppointments({ startDate: start, endDate: end });
+    if (apptRes.success) setMonthlyAppointments(apptRes.appointments);
+  }
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSlot) return;
@@ -56,13 +87,22 @@ export default function AgendaPage() {
 
     const res = await createAppointment({
       ...formData,
+      depositAmount: formData.isBlocked ? 0 : Number(formData.depositAmount),
       date
     });
 
     if (res.success) {
       setIsModalOpen(false);
-      setFormData({ customerId: "", description: "", isReturn: false, isBlocked: false });
-      fetchData();
+      setFormData({
+        customerId: "",
+        description: "",
+        isReturn: false,
+        isBlocked: false,
+        depositAmount: 0,
+        depositMethod: "PIX"
+      });
+      fetchDailyData();
+      fetchMonthlyData();
     } else {
       alert(res.error);
     }
@@ -72,7 +112,81 @@ export default function AgendaPage() {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + days);
     setSelectedDate(newDate);
+    
+    // Auto sync calendar view month if needed
+    if (newDate.getMonth() !== currentMonth || newDate.getFullYear() !== currentYear) {
+      setCurrentMonth(newDate.getMonth());
+      setCurrentYear(newDate.getFullYear());
+    }
   };
+
+  // Calendar Calculation Helpers
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(prev => prev - 1);
+    } else {
+      setCurrentMonth(prev => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(prev => prev + 1);
+    } else {
+      setCurrentMonth(prev => prev + 1);
+    }
+  };
+
+  const getCalendarCells = () => {
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+    const cells = [];
+
+    // Prev month
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const day = daysInPrevMonth - i;
+      const date = new Date(currentYear, currentMonth - 1, day);
+      cells.push({ day, isCurrentMonth: false, date });
+    }
+
+    // Current month
+    for (let i = 1; i <= daysInCurrentMonth; i++) {
+      const date = new Date(currentYear, currentMonth, i);
+      cells.push({ day: i, isCurrentMonth: true, date });
+    }
+
+    // Next month
+    const totalSlots = 42;
+    const remainingSlots = totalSlots - cells.length;
+    for (let i = 1; i <= remainingSlots; i++) {
+      const date = new Date(currentYear, currentMonth + 1, i);
+      cells.push({ day: i, isCurrentMonth: false, date });
+    }
+
+    return cells;
+  };
+
+  const hasApptsOnDate = (cellDate: Date) => {
+    return monthlyAppointments.some(appt => {
+      const apptDate = new Date(appt.date);
+      return apptDate.getDate() === cellDate.getDate() &&
+             apptDate.getMonth() === cellDate.getMonth() &&
+             apptDate.getFullYear() === cellDate.getFullYear() &&
+             appt.status !== 'CANCELLED';
+    });
+  };
+
+  const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getDate() === d2.getDate() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getFullYear() === d2.getFullYear();
+  };
+
+  const calendarCells = getCalendarCells();
 
   return (
     <div className={styles.container}>
@@ -88,85 +202,185 @@ export default function AgendaPage() {
         </div>
       </header>
 
-      <div className={styles.agendaGrid}>
-        {HOURS.map(hour => {
-          const appt = appointments.find(a => new Date(a.date).getHours() === hour);
-          const isPast = new Date(selectedDate).setHours(hour, 0, 0, 0) < Date.now();
-          
-          const apptDate = appt ? new Date(appt.date) : null;
-          const now = new Date();
-          const diffMinutes = apptDate ? (apptDate.getTime() - now.getTime()) / (1000 * 60) : 999;
-          const isUpcoming = appt && diffMinutes > 0 && diffMinutes <= 30 && appt.status === 'SCHEDULED';
-          
-          return (
-            <div key={hour} className={`${styles.slot} ${appt ? (appt.isBlocked ? styles.blockedSlot : styles.occupiedSlot) : styles.freeSlot} ${isUpcoming ? styles.upcomingAlert : ''}`}>
-              <div className={styles.slotTime}>{hour}:00</div>
+      <div className={styles.layoutGrid}>
+        {/* COL 1: Monthly Calendar */}
+        <aside className={styles.calendarArea}>
+          <div className={styles.calendarCard}>
+            <div className={styles.calendarHeader}>
+              <button onClick={handlePrevMonth} className={styles.calendarNavBtn}>&lt;</button>
               
-              <div className={styles.slotContent}>
-                {appt ? (
-                  <>
-                    {appt.isBlocked ? (
-                      <div className={styles.blockedInfo}>
-                        <span>🚫 Bloqueado</span>
-                        <p>{appt.description}</p>
-                        <Button size="small" variant="secondary" onClick={() => updateAppointmentStatus(appt.id, "CANCELLED")} style={{ marginTop: '0.5rem' }}>Desbloquear</Button>
-                      </div>
-                    ) : (
-                      <div className={styles.apptInfo}>
-                        <div className={styles.apptHeader}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <strong>{appt.customer?.name}</strong>
-                            {isUpcoming && <span className={styles.pulseAlert}>⏰ EM BREVE</span>}
+              <div className={styles.calendarSelectors}>
+                <select 
+                  value={currentMonth} 
+                  onChange={(e) => setCurrentMonth(Number(e.target.value))}
+                  className={styles.calendarSelect}
+                >
+                  {months.map((m, idx) => (
+                    <option key={m} value={idx}>{m}</option>
+                  ))}
+                </select>
+                
+                <select 
+                  value={currentYear} 
+                  onChange={(e) => setCurrentYear(Number(e.target.value))}
+                  className={styles.calendarSelect}
+                >
+                  {years.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button onClick={handleNextMonth} className={styles.calendarNavBtn}>&gt;</button>
+            </div>
+
+            <div className={styles.weekdaysGrid}>
+              <span>Dom</span>
+              <span>Seg</span>
+              <span>Ter</span>
+              <span>Qua</span>
+              <span>Qui</span>
+              <span>Sex</span>
+              <span>Sáb</span>
+            </div>
+
+            <div className={styles.daysGrid}>
+              {calendarCells.map((cell, idx) => {
+                const cellIsSelected = isSameDay(cell.date, selectedDate);
+                const cellIsToday = isSameDay(cell.date, today);
+                const cellHasAppts = hasApptsOnDate(cell.date);
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSelectedDate(cell.date);
+                      if (cell.date.getMonth() !== currentMonth) {
+                        setCurrentMonth(cell.date.getMonth());
+                        setCurrentYear(cell.date.getFullYear());
+                      }
+                    }}
+                    className={`
+                      ${styles.calendarCell} 
+                      ${cell.isCurrentMonth ? styles.currentMonthDay : styles.otherMonthDay}
+                      ${cellIsSelected ? styles.selectedDay : ''}
+                      ${cellIsToday ? styles.today : ''}
+                    `}
+                  >
+                    <span>{cell.day}</span>
+                    {cellHasAppts && <span className={styles.hasSalesDot}></span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+
+        {/* COL 2: Hourly Agenda Slots */}
+        <main className={styles.hourlyListArea}>
+          <div className={styles.agendaGrid}>
+            {HOURS.map(hour => {
+              const appt = appointments.find(a => new Date(a.date).getHours() === hour && a.status !== 'CANCELLED');
+              const isPast = new Date(selectedDate).setHours(hour, 0, 0, 0) < Date.now();
+              
+              const apptDate = appt ? new Date(appt.date) : null;
+              const now = new Date();
+              const diffMinutes = apptDate ? (apptDate.getTime() - now.getTime()) / (1000 * 60) : 999;
+              const isUpcoming = appt && diffMinutes > 0 && diffMinutes <= 30 && appt.status === 'SCHEDULED';
+              
+              return (
+                <div key={hour} className={`${styles.slot} ${appt ? (appt.isBlocked ? styles.blockedSlot : styles.occupiedSlot) : styles.freeSlot} ${isUpcoming ? styles.upcomingAlert : ''}`}>
+                  <div className={styles.slotTime}>{hour}:00</div>
+                  
+                  <div className={styles.slotContent}>
+                    {appt ? (
+                      <>
+                        {appt.isBlocked ? (
+                          <div className={styles.blockedInfo}>
+                            <span>🚫 Bloqueado</span>
+                            <p>{appt.description}</p>
+                            <Button size="small" variant="secondary" onClick={() => updateAppointmentStatus(appt.id, "CANCELLED")} style={{ marginTop: '0.5rem' }}>Desbloquear</Button>
                           </div>
-                          {appt.isReturn && <span className={styles.returnBadge}>Retorno</span>}
-                        </div>
-                        <p>{appt.description || "Sem observações"}</p>
-                        
-                        <div className={styles.apptActions}>
-                          {appt.status === "SCHEDULED" && (
-                            <>
-                              <Link href={`/agenda/iniciar/${appt.id}`}>
-                                <Button size="small">▶ Iniciar</Button>
-                              </Link>
-                              <Button size="small" variant="secondary" onClick={() => { 
-                                setSelectedSlot(hour); 
-                                setFormData({ customerId: appt.customerId, description: appt.description, isReturn: appt.isReturn, isBlocked: false });
-                                setIsModalOpen(true);
-                                // For rescheduling, we might want to delete the old one or update it.
-                                // Simplest: user deletes and recreates, or we add an 'Edit' mode.
-                              }}>🔄 Reagendar</Button>
-                              <Button size="small" variant="danger" onClick={() => updateAppointmentStatus(appt.id, "CANCELLED")}>Cancelar</Button>
-                            </>
-                          )}
-                          {appt.status === "COMPLETED" && <span className={styles.statusCompleted}>✅ Concluída</span>}
-                          {appt.status === "CANCELLED" && <span className={styles.statusCancelled}>❌ Cancelada</span>}
-                        </div>
+                        ) : (
+                          <div className={styles.apptInfo}>
+                            <div className={styles.apptHeader}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <strong>{appt.customer?.name}</strong>
+                                {appt.depositAmount > 0 && (
+                                  <span className={styles.sinalBadge}>
+                                    💰 Sinal Pago: R$ {appt.depositAmount.toFixed(2)} ({appt.depositMethod})
+                                  </span>
+                                )}
+                                {isUpcoming && <span className={styles.pulseAlert}>⏰ EM BREVE</span>}
+                              </div>
+                              {appt.isReturn && <span className={styles.returnBadge}>Retorno</span>}
+                            </div>
+                            <p>{appt.description || "Sem observações"}</p>
+                            
+                            <div className={styles.apptActions}>
+                              {appt.status === "SCHEDULED" && (
+                                <>
+                                  <Link href={`/agenda/iniciar/${appt.id}`}>
+                                    <Button size="small">▶ Iniciar</Button>
+                                  </Link>
+                                  <Button size="small" variant="secondary" onClick={() => { 
+                                    setSelectedSlot(hour); 
+                                    setFormData({ 
+                                      customerId: appt.customerId, 
+                                      description: appt.description || '', 
+                                      isReturn: appt.isReturn, 
+                                      isBlocked: false,
+                                      depositAmount: appt.depositAmount || 0,
+                                      depositMethod: appt.depositMethod || "PIX"
+                                    });
+                                    setIsModalOpen(true);
+                                  }}>🔄 Reagendar</Button>
+                                  <Button size="small" variant="danger" onClick={() => {
+                                    updateAppointmentStatus(appt.id, "CANCELLED").then(() => {
+                                      fetchDailyData();
+                                      fetchMonthlyData();
+                                    });
+                                  }}>Cancelar</Button>
+                                </>
+                              )}
+                              {appt.status === "COMPLETED" && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                  <span className={styles.statusCompleted}>✅ Concluída</span>
+                                  <Link href={`/pos?customerId=${appt.customerId}&appointmentId=${appt.id}`}>
+                                    <Button size="small" className={styles.faturarBtn}>💵 Faturar Restante</Button>
+                                  </Link>
+                                </div>
+                              )}
+                              {appt.status === "CANCELLED" && <span className={styles.statusCancelled}>❌ Cancelada</span>}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className={styles.freeActions}>
+                        <button 
+                          className={styles.addBtn} 
+                          onClick={() => { setSelectedSlot(hour); setFormData({...formData, isBlocked: false, depositAmount: 0}); setIsModalOpen(true); }}
+                          disabled={isPast}
+                        >
+                          {isPast ? "---" : "+ Agendar"}
+                        </button>
+                        {!isPast && (
+                          <button 
+                            className={styles.blockBtn} 
+                            onClick={() => { setSelectedSlot(hour); setFormData({...formData, isBlocked: true, depositAmount: 0}); setIsModalOpen(true); }}
+                          >
+                            🚫 Bloquear
+                          </button>
+                        )}
                       </div>
-                    )}
-                  </>
-                ) : (
-                  <div className={styles.freeActions}>
-                    <button 
-                      className={styles.addBtn} 
-                      onClick={() => { setSelectedSlot(hour); setFormData({...formData, isBlocked: false}); setIsModalOpen(true); }}
-                      disabled={isPast}
-                    >
-                      {isPast ? "---" : "+ Agendar"}
-                    </button>
-                    {!isPast && (
-                      <button 
-                        className={styles.blockBtn} 
-                        onClick={() => { setSelectedSlot(hour); setFormData({...formData, isBlocked: true}); setIsModalOpen(true); }}
-                      >
-                        🚫 Bloquear
-                      </button>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                </div>
+              );
+            })}
+          </div>
+        </main>
       </div>
 
       {isModalOpen && (
@@ -182,6 +396,7 @@ export default function AgendaPage() {
                       <label>
                         <input 
                           type="radio" 
+                          name="isBlocked"
                           checked={!formData.isBlocked} 
                           onChange={() => setFormData({...formData, isBlocked: false})} 
                         /> Consulta
@@ -189,6 +404,7 @@ export default function AgendaPage() {
                       <label>
                         <input 
                           type="radio" 
+                          name="isBlocked"
                           checked={formData.isBlocked} 
                           onChange={() => setFormData({...formData, isBlocked: true})} 
                         /> Bloquear Horário
@@ -210,8 +426,9 @@ export default function AgendaPage() {
                           {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.cpf || 'Sem CPF'})</option>)}
                         </select>
                       </div>
+
                       <div className={styles.formGroup}>
-                        <label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                           <input 
                             type="checkbox" 
                             checked={formData.isReturn} 
@@ -219,11 +436,42 @@ export default function AgendaPage() {
                           /> É um retorno?
                         </label>
                       </div>
+
+                      {/* Sinal / Entrada Payment Fields */}
+                      {!formData.isReturn && (
+                        <Card style={{ padding: '1rem', background: '#fcfbf7', border: '1px solid var(--border-gold)', marginBottom: '1.25rem' }}>
+                          <h4 style={{ color: 'var(--gold-primary)', marginBottom: '0.75rem', fontSize: '0.95rem', marginTop: 0 }}>💸 Lançar Sinal / Entrada</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                              <label style={{ fontSize: '0.8rem', color: '#666', display: 'block', marginBottom: '0.25rem' }}>Valor da Entrada (R$)</label>
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                step="0.01" 
+                                placeholder="0.00"
+                                value={formData.depositAmount || ''} 
+                                onChange={e => setFormData({...formData, depositAmount: Number(e.target.value)})}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: '0.8rem', color: '#666', display: 'block', marginBottom: '0.25rem' }}>Forma de Pagamento</label>
+                              <select 
+                                className={styles.select} 
+                                value={formData.depositMethod} 
+                                onChange={e => setFormData({...formData, depositMethod: e.target.value})}
+                              >
+                                <option value="PIX">PIX</option>
+                                <option value="CARTAO">Cartão</option>
+                              </select>
+                            </div>
+                          </div>
+                        </Card>
+                      )}
                     </>
                   ) : null}
 
                   <div className={styles.formGroup}>
-                    <label>{formData.isBlocked ? "Motivo do Bloqueio" : "Observações"}</label>
+                    <label style={{ fontWeight: 600 }}>{formData.isBlocked ? "Motivo do Bloqueio" : "Observações"}</label>
                     <textarea 
                       className={styles.textarea}
                       value={formData.description}

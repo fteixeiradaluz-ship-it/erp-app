@@ -25,7 +25,36 @@ export async function parseBankStatement(formData: FormData) {
       return { error: 'Formato de arquivo não suportado. Use .ofx ou .csv' }
     }
 
-    return { success: true, transactions }
+    // Buscar lançamentos pendentes para conciliação automática
+    const pending = await prisma.transaction.findMany({
+      where: { status: 'PENDING', deletedAt: null },
+      orderBy: { dueDate: 'asc' }
+    })
+
+    // Cruzar as transações do extrato com transações pendentes cadastradas
+    const matchedTransactions = transactions.map(tx => {
+      const type = tx.amount > 0 ? 'INCOME' : 'EXPENSE'
+      const amount = Math.abs(tx.amount)
+
+      // Regra de cruzamento: mesmo tipo, valor idêntico e vencimento próximo (margem de 10 dias)
+      const match = pending.find(p => {
+        if (p.type !== type) return false
+        if (Math.abs(p.amount - amount) > 0.01) return false
+        if (!p.dueDate) return false
+
+        const diffTime = Math.abs(new Date(p.dueDate).getTime() - new Date(tx.date).getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        return diffDays <= 10
+      })
+
+      return {
+        ...tx,
+        reconcileWithId: match ? match.id : null,
+        reconcileWithDesc: match ? match.description : null
+      }
+    })
+
+    return { success: true, transactions: matchedTransactions }
   } catch (err) {
     return { error: 'Erro ao processar arquivo: ' + (err as Error).message }
   }
@@ -122,31 +151,46 @@ export async function bulkImportTransactions(data: { bankId: string, transaction
                 const amount = Math.abs(item.amount)
                 totalModifier += item.amount // Sum original values (income is +, expense is -)
 
-                await tx.transaction.create({
-                    data: {
-                        bankId: data.bankId,
-                        type,
-                        amount,
-                        description: item.description,
-                        status: 'PAID',
-                        payDate: new Date(item.date),
-                        createdAt: new Date(item.date)
-                    }
-                })
+                if (item.reconcileWithId) {
+                    // Dar baixa (Pagar/Receber) na transação pendente existente em vez de duplicar
+                    await tx.transaction.update({
+                        where: { id: item.reconcileWithId },
+                        data: {
+                            status: 'PAID',
+                            payDate: new Date(item.date)
+                        }
+                    })
+                } else {
+                    // Criar novo lançamento direto
+                    await tx.transaction.create({
+                        data: {
+                            bankId: data.bankId,
+                            type,
+                            amount,
+                            description: item.description,
+                            status: 'PAID',
+                            payDate: new Date(item.date),
+                            createdAt: new Date(item.date)
+                        }
+                    })
+                }
             }
 
+            // Atualiza saldo final do banco com a movimentação líquida do extrato
             await tx.bank.update({
                 where: { id: data.bankId },
                 data: { balance: { increment: totalModifier } }
             })
         }, {
-            timeout: 20000 // 20 seconds timeout for bulk operations
+            timeout: 25000 // 25 seconds timeout for bulk operations
         })
 
         revalidatePath('/financeiro')
+        revalidatePath('/contas-pagar')
+        revalidatePath('/dashboard')
         return { success: true }
     } catch (err: any) {
         console.error('Import Error:', err)
-        return { error: 'Erro ao importar transações: ' + err.message }
+        return { error: 'Erro ao importar/conciliar transações: ' + err.message }
     }
 }

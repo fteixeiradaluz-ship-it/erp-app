@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import styles from './Sidebar.module.css'
 import { logoutAction } from '@/app/actions/authActions'
 
-export default function Sidebar({ role, logo, companyName, isOpen, onClose }: { role: string, logo?: string | null, companyName: string, isOpen?: boolean, onClose?: () => void }) {
+export default function Sidebar({ role, permissions, logo, companyName, isOpen, onClose }: { role: string, permissions: string, logo?: string | null, companyName: string, isOpen?: boolean, onClose?: () => void }) {
   const pathname = usePathname()
 
   const handleLogout = async () => {
@@ -14,23 +14,35 @@ export default function Sidebar({ role, logo, companyName, isOpen, onClose }: { 
   }
 
   const allItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: '📊', allowedRoles: ['ADMIN', 'SELLER', 'SECRETARY'] },
-    { label: 'Vendas (PDV)', path: '/pos', icon: '🛒', allowedRoles: ['ADMIN', 'SELLER', 'SECRETARY'] },
-    { label: 'Agenda', path: '/agenda', icon: '📅', allowedRoles: ['ADMIN', 'SECRETARY'] },
-    { label: 'Envios', path: '/envios', icon: '📦', allowedRoles: ['ADMIN', 'SELLER'] },
-    { label: 'Relatórios', path: '/relatorios', icon: '📈', allowedRoles: ['ADMIN', 'SELLER', 'SECRETARY'] },
-    { label: 'Clientes', path: '/clientes', icon: '👥', allowedRoles: ['ADMIN', 'SELLER', 'SECRETARY'] },
-    { label: 'Fornecedores', path: '/fornecedores', icon: '🏭', allowedRoles: ['ADMIN'] },
-    { label: 'Estoque', path: '/estoque', icon: '📦', allowedRoles: ['ADMIN'] },
-    { label: 'Precificação', path: '/precificacao', icon: '🧮', allowedRoles: ['ADMIN'] },
-    { label: 'Financeiro', path: '/financeiro', icon: '💰', allowedRoles: ['ADMIN'] },
-    { label: 'Contas a Pagar', path: '/contas-pagar', icon: '💸', allowedRoles: ['ADMIN'] },
-    { label: 'Logs do Sistema', path: '/admin/logs', icon: '📜', allowedRoles: ['ADMIN'] },
-    { label: 'Usuários', path: '/admin/usuarios', icon: '🛡️', allowedRoles: ['ADMIN'] },
-    { label: 'Configurações', path: '/configuracoes', icon: '⚙️', allowedRoles: ['ADMIN'] },
+    { label: 'Dashboard', path: '/dashboard', icon: '📊', token: 'dashboard' },
+    { label: 'Vendas (PDV)', path: '/pos', icon: '🛒', token: 'pos' },
+    { label: 'Agenda', path: '/agenda', icon: '📅', token: 'agenda' },
+    { label: 'Envios', path: '/envios', icon: '📦', token: 'envios' },
+    { label: 'Relatórios', path: '/relatorios', icon: '📈', token: 'relatorios' },
+    { label: 'Clientes', path: '/clientes', icon: '👥', token: 'clientes' },
+    { label: 'Fornecedores', path: '/fornecedores', icon: '🏭', token: 'fornecedores' },
+    { label: 'Estoque', path: '/estoque', icon: '📦', token: 'estoque' },
+    { label: 'Precificação', path: '/precificacao', icon: '🧮', token: 'precificacao' },
+    { label: 'Financeiro', path: '/financeiro', icon: '💰', token: 'financeiro' },
+    { label: 'Contas a Pagar', path: '/contas-pagar', icon: '💸', token: 'contas-pagar' },
+    { label: 'Logs do Sistema', path: '/admin/logs', icon: '📜', token: 'logs' },
+    { label: 'Usuários', path: '/admin/usuarios', icon: '🛡️', token: 'usuarios' },
+    { label: 'Configurações', path: '/configuracoes', icon: '⚙️', token: 'configuracoes' },
   ]
 
-  const navItems = allItems.filter(item => item.allowedRoles.includes(role))
+  let activePermissions = permissions || ''
+  if (!activePermissions) {
+    if (role === 'ADMIN') {
+      activePermissions = 'dashboard,pos,agenda,envios,relatorios,clientes,fornecedores,estoque,precificacao,financeiro,contas-pagar,logs,usuarios,configuracoes'
+    } else if (role === 'SECRETARY') {
+      activePermissions = 'dashboard,pos,agenda,relatorios,clientes'
+    } else {
+      activePermissions = 'dashboard,pos,envios,relatorios,clientes'
+    }
+  }
+
+  const allowedTokens = activePermissions.split(',')
+  const navItems = role === 'ADMIN' ? allItems : allItems.filter(item => allowedTokens.includes(item.token))
 
   return (
     <>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import styles from './customerDetail.module.css'
-import { getCustomerDetail } from '@/app/actions/customerActions'
+import { getCustomerDetail, updateCustomerGeneralNotes } from '@/app/actions/customerActions'
 import { upsertMedicalRecord, deleteMedicalRecord } from '@/app/actions/medicalRecordActions'
 import { getSessionAction } from '@/app/actions/authActions'
 import { Button } from '@/components/ui/Button'
@@ -23,6 +23,10 @@ export default function CustomerDetailPage() {
   const [recordContent, setRecordContent] = useState('')
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null)
 
+  // Prontuario persistent general notes
+  const [generalNotes, setGeneralNotes] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
+
   useEffect(() => {
     loadData()
     checkSession()
@@ -38,11 +42,24 @@ export default function CustomerDetailPage() {
     const res = await getCustomerDetail(id as string)
     if (res.success) {
       setCustomer(res.customer)
+      setGeneralNotes(res.customer.generalNotes || '')
     } else {
       alert(res.error)
       router.push('/clientes')
     }
     setLoading(false)
+  }
+
+  const handleSaveGeneralNotes = async () => {
+    setSavingNotes(true)
+    const res = await updateCustomerGeneralNotes(id as string, generalNotes)
+    if (res.success) {
+      alert('Anotações gerais salvas com sucesso!')
+      loadData()
+    } else {
+      alert(res.error)
+    }
+    setSavingNotes(false)
   }
 
   const handleSaveRecord = async () => {
@@ -148,8 +165,41 @@ export default function CustomerDetailPage() {
 
         {activeTab === 'prontuario' && (
           <div className={styles.prontuarioArea}>
+            <div className={styles.generalNotesContainer} style={{ marginBottom: '2rem' }}>
+              <Card>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--gold-primary)', margin: 0 }}>📝 Anotações Gerais do Prontuário</h3>
+                    <Button onClick={handleSaveGeneralNotes} disabled={savingNotes} size="small">
+                      {savingNotes ? 'Salvando...' : '💾 Salvar Anotações'}
+                    </Button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>
+                    Informações permanentes que ficam sempre visíveis (como alergias, restrições médicas, características de pele ou observações importantes).
+                  </p>
+                  <textarea
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-gold)',
+                      fontSize: '0.95rem',
+                      fontFamily: 'inherit',
+                      background: '#fff',
+                      resize: 'vertical',
+                      outline: 'none',
+                    }}
+                    placeholder="Ex: Alergia a dipirona. Rosácea leve. Pele do tipo sensível. Prefere procedimentos menos invasivos..."
+                    value={generalNotes}
+                    onChange={(e) => setGeneralNotes(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </Card>
+            </div>
+
             <div className={styles.tabHeader}>
-              <h2>Histórico Clínico</h2>
+              <h2>Histórico de Sessões e Evoluções</h2>
               {isManager && (
                 <Button onClick={() => {
                   setEditingRecordId(null)

@@ -6,6 +6,7 @@ const key = new TextEncoder().encode(secretKey)
 export interface SessionPayload extends JWTPayload {
   userId: string;
   role: string;
+  permissions?: string;
 }
 
 export async function encrypt(payload: SessionPayload) {
