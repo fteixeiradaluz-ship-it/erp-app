@@ -137,3 +137,61 @@
     align-items: flex-start;
   }
 }
+
+/* Exclusão & Justificativa */
+.justificationArea {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-gold);
+  background: #fff;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  resize: vertical;
+}
+
+/* Filtros de Calendário de Período */
+.dateFilterWrapper {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+  background: rgba(212, 175, 55, 0.03);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.dateInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dateInputGroup label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.dateField {
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-gold);
+  background: #fff;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.dateField:focus {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
+}

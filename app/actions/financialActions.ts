@@ -323,6 +323,27 @@ export async function getPendingPayables() {
     if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
 
     try {
+        // Garantir que as contas de cartões solicitadas pelo usuário existem
+        const requiredBanks = [
+            "cartao empresa Nubank",
+            "Cartão Empresa Itaú",
+            "cartão Patricia Pão De Açucar",
+            "Cartão Patricia Rico Investimentos"
+        ];
+        for (const bankName of requiredBanks) {
+            const exists = await prisma.bank.findFirst({
+                where: { name: bankName }
+            });
+            if (!exists) {
+                await prisma.bank.create({
+                    data: {
+                        name: bankName,
+                        balance: 0
+                    }
+                });
+            }
+        }
+
         const transactions = await prisma.transaction.findMany({
             where: {
                 type: 'EXPENSE',
