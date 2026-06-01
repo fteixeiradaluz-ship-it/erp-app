@@ -323,12 +323,14 @@ export async function getPendingPayables() {
     if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
 
     try {
-        // Garantir que as contas de cartões solicitadas pelo usuário existem
+        // Garantir que as contas de cartões e opções de pagamento solicitadas pelo usuário existem
         const requiredBanks = [
             "cartao empresa Nubank",
             "Cartão Empresa Itaú",
             "cartão Patricia Pão De Açucar",
-            "Cartão Patricia Rico Investimentos"
+            "Cartão Patricia Rico Investimentos",
+            "Boleto Bancário",
+            "Débito em Conta"
         ];
         for (const bankName of requiredBanks) {
             const exists = await prisma.bank.findFirst({
