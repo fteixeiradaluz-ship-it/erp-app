@@ -1,8 +1,8 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  animation: fadeIn 0.3s ease-in-out;
+  gap: 2.25rem;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .header {
@@ -14,43 +14,61 @@
 }
 
 .header h1 {
-  font-size: 2rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 2.25rem;
   color: var(--gold-primary);
   font-weight: 700;
+  letter-spacing: -0.02em;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .tabs {
   display: flex;
   gap: 0.5rem;
   border-bottom: 1px solid var(--border-gold);
-  padding-bottom: 0.5rem;
+  padding-bottom: 0px;
   overflow-x: auto;
   white-space: nowrap;
 }
 
+/* Elegant custom scrollbar for horizontal tabs on mobile */
+.tabs::-webkit-scrollbar {
+  height: 4px;
+}
+.tabs::-webkit-scrollbar-thumb {
+  background: rgba(197, 168, 92, 0.15);
+  border-radius: 99px;
+}
+
 .tab {
-  padding: 0.6rem 1.2rem;
+  padding: 0.8rem 1.4rem;
   cursor: pointer;
-  color: #666;
+  color: var(--text-secondary);
+  font-family: 'Outfit', sans-serif;
   font-weight: 600;
-  border-radius: 8px 8px 0 0;
-  transition: all 0.2s;
+  font-size: 0.95rem;
+  border-radius: 10px 10px 0 0;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border-bottom: 3px solid transparent;
 }
 
 .tab:hover {
   background-color: var(--surface-hover);
+  color: var(--gold-primary);
 }
 
 .activeTab {
-  color: var(--gold-primary);
+  color: var(--gold-hover);
   border-bottom: 3px solid var(--gold-primary);
-  background: rgba(212, 175, 55, 0.05);
+  background: linear-gradient(180deg, transparent 50%, rgba(197, 168, 92, 0.06) 100%);
 }
 
 .tableContainer {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: var(--shadow-sm);
+  background: var(--card-bg);
+  border-radius: var(--radius-md, 14px);
+  box-shadow: var(--shadow-md);
   overflow-x: auto;
   border: 1px solid var(--border-gold);
 }
@@ -58,77 +76,95 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 800px;
+  min-width: 850px;
 }
 
 .table th,
 .table td {
-  padding: 1rem 1.5rem;
+  padding: 1.1rem 1.5rem;
   text-align: left;
 }
 
 .table th {
-  background-color: rgba(212, 175, 55, 0.05);
-  font-weight: 600;
+  background-color: rgba(197, 168, 92, 0.04);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
   color: var(--gold-primary);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
   border-bottom: 2px solid var(--border-gold);
 }
 
 .table td {
-  border-bottom: 1px solid var(--background);
+  border-bottom: 1px solid rgba(197, 168, 92, 0.08);
   color: var(--foreground);
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease;
 }
 
-.table tr:hover {
+.table tr {
+  transition: background-color 0.2s ease;
+}
+
+.table tr:hover td {
   background-color: var(--surface-hover);
 }
 
 .statusOverdue {
-  color: #d32f2f;
+  color: var(--error);
   font-weight: 700;
 }
 
 .statusWarning {
-  color: #f57c00;
+  color: var(--warning);
   font-weight: 700;
 }
 
-/* Modais */
+/* Luxury Modal overlays */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(28, 25, 21, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 2000;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
 .modal {
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-md, 14px);
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  overflow: hidden;
 }
 
 .modalContent {
-  padding: 1.5rem;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
 .modalContent h2 {
+  font-family: 'Outfit', sans-serif;
   color: var(--gold-primary);
-  font-size: 1.4rem;
-  margin-bottom: 1rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: scale(0.98) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @media (max-width: 768px) {
@@ -138,60 +174,71 @@
   }
 }
 
-/* Exclusão & Justificativa */
+/* Exclusão & Justificativa Textarea */
 .justificationArea {
   width: 100%;
-  min-height: 80px;
-  padding: 0.8rem;
-  border-radius: 8px;
+  min-height: 90px;
+  padding: 0.85rem 1.1rem;
+  border-radius: 10px;
   border: 1px solid var(--border-gold);
-  background: #fff;
+  background: #ffffff;
   color: var(--foreground);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   margin-top: 0.5rem;
   resize: vertical;
+  outline: none;
+  transition: all 0.3s ease;
 }
 
-/* Filtros de Calendário de Período */
+.justificationArea:focus {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15) !important;
+}
+
+/* Custom Period Calendar Filters styling */
 .dateFilterWrapper {
   display: flex;
   gap: 1.5rem;
   align-items: center;
-  margin: 1rem 0;
+  margin: 0.5rem 0 1.5rem 0;
   flex-wrap: wrap;
-  background: rgba(212, 175, 55, 0.03);
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid rgba(212, 175, 55, 0.15);
-  animation: fadeIn 0.2s ease-in-out;
+  background: rgba(197, 168, 92, 0.04);
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-md, 14px);
+  border: 1px solid rgba(197, 168, 92, 0.16);
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .dateInputGroup {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
 .dateInputGroup label {
+  font-family: 'Outfit', sans-serif;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .dateField {
-  padding: 0.5rem 0.8rem;
+  padding: 0.6rem 1rem;
   border-radius: 8px;
   border: 1px solid var(--border-gold);
-  background: #fff;
+  background: #ffffff;
   color: var(--foreground);
   font-family: inherit;
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .dateField:focus {
   border-color: var(--gold-primary);
-  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
+  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15) !important;
 }
+

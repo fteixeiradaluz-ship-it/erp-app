@@ -4,15 +4,16 @@
   left: 0;
   width: var(--sidebar-w);
   height: 100vh;
-  background: #ffffff;
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-right: 1px solid var(--border-gold);
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 0;
+  padding: 2rem 0;
   z-index: 1000;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 4px 0 30px rgba(197, 168, 92, 0.03);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sidebarHeader {
@@ -20,21 +21,26 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2rem;
-  padding: 1rem;
+  margin-bottom: 2.5rem;
+  padding: 0 1.5rem;
   position: relative;
 }
 
 .closeBtn {
   position: absolute;
-  top: 1rem;
+  top: 0.5rem;
   right: 0.5rem;
   background: transparent;
   border: none;
   font-size: 1.5rem;
-  color: #888;
+  color: var(--text-secondary);
   cursor: pointer;
   display: none;
+  transition: color 0.2s ease;
+}
+
+.closeBtn:hover {
+  color: var(--gold-primary);
 }
 
 .logoWrapper {
@@ -45,69 +51,92 @@
 }
 
 .logoImg {
-  max-height: 50px;
-  max-width: 80%;
+  max-height: 55px;
+  max-width: 90%;
   object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(197, 168, 92, 0.1));
 }
 
 .companyNameText {
-  font-size: 1.2rem;
-  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
   color: var(--gold-primary);
-  letter-spacing: 1.5px;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   text-align: center;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .nav {
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: 0.5rem;
-  padding: 0 1rem;
+  gap: 0.35rem;
+  padding: 0 1.2rem;
   overflow-y: auto;
+}
+
+/* Custom scrollbar for sidebar nav items */
+.nav::-webkit-scrollbar {
+  width: 4px;
+}
+.nav::-webkit-scrollbar-thumb {
+  background: rgba(197, 168, 92, 0.25);
+  border-radius: 99px;
 }
 
 .navItem {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.8rem 1rem;
-  border-radius: 8px;
-  color: #555;
+  gap: 0.85rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 10px;
+  color: var(--text-secondary);
   font-weight: 500;
-  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .navItem:hover {
-  background: rgba(212, 175, 55, 0.1);
-  color: var(--gold-primary);
+  background: var(--gold-light);
+  color: var(--gold-hover);
+  transform: translateX(3px);
 }
 
 .active {
-  background: linear-gradient(90deg, rgba(212, 175, 55, 0.2) 0%, transparent 100%);
-  color: var(--gold-primary);
+  background: linear-gradient(90deg, rgba(197, 168, 92, 0.12) 0%, rgba(197, 168, 92, 0.01) 100%);
+  color: var(--gold-hover);
   border-left: 3px solid var(--gold-primary);
+  font-weight: 600;
 }
 
 .icon {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
+  transition: transform 0.2s ease;
+}
+
+.navItem:hover .icon {
+  transform: scale(1.1);
 }
 
 .footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(0,0,0,0.05);
+  padding: 1.5rem 1.5rem 0 1.5rem;
+  border-top: 1px solid var(--border-gold);
 }
 
 .logoutBtn {
   width: 100%;
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  color: #444;
-  padding: 0.75rem;
-  border-radius: 6px;
+  border: 1px solid var(--border-gold);
+  color: var(--text-secondary);
+  padding: 0.85rem;
+  border-radius: 10px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -115,16 +144,18 @@
 }
 
 .logoutBtn:hover {
-  background: rgba(255, 50, 50, 0.1);
-  border-color: rgba(255, 50, 50, 0.3);
-  color: #ff4d4d;
+  background: rgba(183, 9, 76, 0.07);
+  border-color: rgba(183, 9, 76, 0.25);
+  color: var(--error);
+  transform: translateY(-1px);
 }
 
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(28, 25, 21, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 999;
 }
 
@@ -141,3 +172,4 @@
     display: block;
   }
 }
+

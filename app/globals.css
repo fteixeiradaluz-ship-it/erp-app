@@ -1,43 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  --background: #fdfdfb; /* Very light cream/white */
-  --foreground: #2d2d2d;
-  --gold-primary: #d4af37;
-  --gold-hover: #c4a02d;
-  --gold-light: rgba(212, 175, 55, 0.1);
-  --panel-bg: rgba(255, 255, 255, 0.95);
+  --background: #fbfaf7; /* Luxury warm alabaster / soft cream */
+  --foreground: #1c1915; /* Elegant rich dark bronze / deep charcoal */
+  --gold-primary: #c5a85c; /* Sophisticated champagne gold */
+  --gold-hover: #b09148; /* Deep rich gold */
+  --gold-light: rgba(197, 168, 92, 0.07); /* Ultra subtle gold background highlight */
+  --gold-gradient: linear-gradient(135deg, #dfc07b 0%, #c5a85c 50%, #9e7f3c 100%); /* Real gold shimmer gradient */
+  --panel-bg: rgba(255, 255, 255, 0.85);
   --card-bg: #ffffff;
-  --border-gold: rgba(212, 175, 55, 0.25);
+  --border-gold: rgba(197, 168, 92, 0.16);
   --sidebar-w: 260px;
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
-  --shadow-md: 0 8px 24px rgba(212, 175, 55, 0.08);
   
-  /* Aliases for warmer tones */
+  --shadow-sm: 0 4px 20px rgba(197, 168, 92, 0.03);
+  --shadow-md: 0 12px 36px rgba(197, 168, 92, 0.05);
+  --shadow-lg: 0 24px 60px rgba(197, 168, 92, 0.08);
+  
   --text-primary: var(--foreground);
-  --text-secondary: #7a735a; /* Warm grey/gold mix */
+  --text-secondary: #706756; /* Refined muted bronze grey */
   --border-color: var(--border-gold);
   --surface-card: var(--card-bg);
-  --surface-hover: #fefcf5;
+  --surface-hover: #fbf9f2; /* Smooth warm hover */
   
   --mobile-header-h: 70px;
   
-  --success: #2e7d32;
-  --error: #d32f2f;
-  --warning: #ed6c02;
-  --info: #0288d1;
+  --success: #2d6a4f; /* Emerald green instead of plain green */
+  --error: #b7094c; /* Deep berry/crimson red instead of bright red */
+  --warning: #ca6702; /* Sophisticated amber instead of plain orange */
+  --info: #005f73; /* Rich teal instead of bright blue */
 }
 
-/* Utilitário para tabelas responsivas */
+/* Responsive Table Container styling */
 .tableContainer {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-gold);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
 }
 
 .tableContainer table {
-  min-width: 600px; /* Garante que a tabela não esmague no celular */
+  min-width: 600px;
 }
 
 * {
@@ -49,29 +55,53 @@
 body {
   background-color: var(--background);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(212, 175, 55, 0.02) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(197, 168, 92, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(197, 168, 92, 0.03) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.6) 0px, transparent 100%);
   color: var(--foreground);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', 'Inter', sans-serif;
   min-height: 100vh;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+  transition: color 0.2s ease;
 }
 
-/* Scrollbar elegante branco e dourado */
+/* Premium White and Gold Scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: var(--background);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--gold-primary);
-  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(197, 168, 92, 0.2) 0%, rgba(197, 168, 92, 0.6) 100%);
+  border-radius: 99px;
+  border: 2px solid var(--background);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--gold-hover);
 }
+
+/* Global focus styling for elements */
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gold-primary) !important;
+  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15) !important;
+}
+
+/* Smooth page load animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
