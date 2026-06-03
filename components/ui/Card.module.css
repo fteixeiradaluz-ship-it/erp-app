@@ -1,28 +1,49 @@
 .card {
   background: var(--card-bg);
-  border: 1px solid var(--border-gold);
-  border-radius: var(--radius-md, 14px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   padding: 1.75rem;
-  box-shadow: var(--shadow-md);
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 0.25s var(--ease-std),
+    box-shadow   0.25s var(--ease-std),
+    transform    0.25s var(--ease-std);
   position: relative;
   overflow: hidden;
 }
 
+/* Subtle top shimmer line */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(197, 168, 92, 0.3) 50%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
 .card:hover {
-  border-color: rgba(197, 168, 92, 0.35);
-  box-shadow: var(--shadow-lg);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
+}
+.card:hover::before {
+  opacity: 1;
 }
 
 .cardTitle {
   font-family: 'Outfit', sans-serif;
-  font-size: 1.15rem;
-  color: var(--gold-primary);
+  font-size: 1.05rem;
+  color: var(--text-primary);
   margin-bottom: 1.25rem;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(197, 168, 92, 0.12);
-  padding-bottom: 0.75rem;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.85rem;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-

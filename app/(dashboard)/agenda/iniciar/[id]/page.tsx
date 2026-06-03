@@ -16,6 +16,7 @@ export default function IniciarConsultaPage({ params }: { params: Promise<{ id: 
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Receituário states
   const [isPrescriptionOpen, setIsPrescriptionOpen] = useState(false);
@@ -92,12 +93,14 @@ EXAMES SOLICITADOS:
     if (res.success) {
       // 2. Mark appointment as COMPLETED
       await updateAppointmentStatus(id, "COMPLETED");
-      alert("Consulta concluída e prontuário salvo!");
-      router.push("/agenda");
+      setSaving(false);
+      setShowSuccessModal(true);
+      // Auto-redirect after 4 seconds
+      setTimeout(() => router.push("/agenda"), 4000);
     } else {
       alert(res.error);
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Carregando dados da consulta...</div>;
@@ -327,6 +330,138 @@ EXAMES SOLICITADOS:
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── Success Modal ── */}
+      {showSuccessModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(14, 12, 8, 0.70)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          animation: 'fadeIn 0.25s ease-out',
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: 'var(--radius-xl)',
+            padding: '3rem 2.5rem 2.5rem',
+            width: '100%',
+            maxWidth: '480px',
+            boxShadow: 'var(--shadow-xl)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.25rem',
+            textAlign: 'center',
+            animation: 'scaleIn 0.35s var(--ease-spring)',
+            position: 'relative',
+          }}>
+            {/* Animated check circle */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(46, 125, 50, 0.30)',
+              animation: 'pulse-gold 2s ease-in-out infinite',
+              fontSize: '2.2rem',
+              lineHeight: 1,
+            }}>
+              ✓
+            </div>
+
+            {/* Title */}
+            <div>
+              <h2 style={{
+                margin: 0,
+                fontSize: '1.55rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+              }}>
+                Consulta Concluída!
+              </h2>
+              <p style={{
+                margin: '0.5rem 0 0',
+                fontSize: '0.9rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.5,
+              }}>
+                O atendimento foi finalizado com sucesso e o prontuário foi salvo.
+              </p>
+            </div>
+
+            {/* Info card */}
+            <div style={{
+              width: '100%',
+              background: 'var(--gold-50)',
+              border: '1px solid var(--border-hover)',
+              borderRadius: 'var(--radius-md)',
+              padding: '1rem 1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              textAlign: 'left',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '1rem' }}>👤</span>
+                <span><strong>Paciente:</strong> {appt?.customer?.name}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+                <span style={{ fontSize: '1rem' }}>📅</span>
+                <span>
+                  {new Date(appt?.date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+                <span style={{ fontSize: '1rem' }}>🕐</span>
+                <span>{new Date(appt?.date).getHours()}:00 — {appt?.isReturn ? 'Retorno' : 'Primeira Consulta'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}>
+                <span style={{ fontSize: '1rem' }}>✅</span>
+                <span style={{ color: '#2e7d32', fontWeight: 600 }}>Status: Concluído</span>
+              </div>
+            </div>
+
+            {/* Progress bar (4s countdown) */}
+            <div style={{ width: '100%' }}>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem', textAlign: 'center' }}>
+                Redirecionando para a Agenda em instantes...
+              </p>
+              <div style={{
+                height: '3px',
+                background: 'var(--border-color)',
+                borderRadius: '99px',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #2e7d32, #43a047)',
+                  borderRadius: '99px',
+                  animation: 'progressCountdown 4s linear forwards',
+                }} />
+              </div>
+            </div>
+
+            {/* CTA Button */}
+            <Button
+              onClick={() => router.push('/agenda')}
+              style={{ width: '100%', marginTop: '0.25rem' }}
+            >
+              🏥 Ir para a Agenda agora
+            </Button>
           </div>
         </div>
       )}

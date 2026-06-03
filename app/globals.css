@@ -1,107 +1,220 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
 :root {
-  --background: #fbfaf7; /* Luxury warm alabaster / soft cream */
-  --foreground: #1c1915; /* Elegant rich dark bronze / deep charcoal */
-  --gold-primary: #c5a85c; /* Sophisticated champagne gold */
-  --gold-hover: #b09148; /* Deep rich gold */
-  --gold-light: rgba(197, 168, 92, 0.07); /* Ultra subtle gold background highlight */
-  --gold-gradient: linear-gradient(135deg, #dfc07b 0%, #c5a85c 50%, #9e7f3c 100%); /* Real gold shimmer gradient */
-  --panel-bg: rgba(255, 255, 255, 0.85);
-  --card-bg: #ffffff;
-  --border-gold: rgba(197, 168, 92, 0.16);
-  --sidebar-w: 260px;
-  
-  --shadow-sm: 0 4px 20px rgba(197, 168, 92, 0.03);
-  --shadow-md: 0 12px 36px rgba(197, 168, 92, 0.05);
-  --shadow-lg: 0 24px 60px rgba(197, 168, 92, 0.08);
-  
-  --text-primary: var(--foreground);
-  --text-secondary: #706756; /* Refined muted bronze grey */
-  --border-color: var(--border-gold);
-  --surface-card: var(--card-bg);
-  --surface-hover: #fbf9f2; /* Smooth warm hover */
-  
-  --mobile-header-h: 70px;
-  
-  --success: #2d6a4f; /* Emerald green instead of plain green */
-  --error: #b7094c; /* Deep berry/crimson red instead of bright red */
-  --warning: #ca6702; /* Sophisticated amber instead of plain orange */
-  --info: #005f73; /* Rich teal instead of bright blue */
+  /* ── Palette ─────────────────────────────────── */
+  --background: #f9f7f2;
+  --foreground: #18150f;
+
+  /* Gold */
+  --gold-50:  rgba(197, 168, 92, 0.05);
+  --gold-100: rgba(197, 168, 92, 0.10);
+  --gold-200: rgba(197, 168, 92, 0.18);
+  --gold-primary: #c4a35a;
+  --gold-hover:   #a8883f;
+  --gold-gradient: linear-gradient(135deg, #e0c97a 0%, #c4a35a 45%, #9d7b35 100%);
+  --gold-gradient-subtle: linear-gradient(135deg, #f0e4b6 0%, #e0c97a 50%, #c4a35a 100%);
+
+  /* Surfaces */
+  --card-bg:   #ffffff;
+  --card-bg2:  #fdfcf8;
+  --panel-bg:  rgba(255, 255, 255, 0.88);
+
+  /* Borders */
+  --border-color:    rgba(197, 168, 92, 0.14);
+  --border-hover:    rgba(197, 168, 92, 0.32);
+  --border-strong:   rgba(197, 168, 92, 0.45);
+
+  /* Text */
+  --text-primary:    #18150f;
+  --text-secondary:  #7a6e5f;
+  --text-muted:      #b0a490;
+  --text-on-gold:    #2c1e00;
+
+  /* Layout */
+  --sidebar-w: 264px;
+  --mobile-header-h: 64px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 4px rgba(28, 22, 10, 0.04);
+  --shadow-sm: 0 2px 12px rgba(28, 22, 10, 0.05), 0 1px 3px rgba(28, 22, 10, 0.04);
+  --shadow-md: 0 4px 24px rgba(28, 22, 10, 0.07), 0 1px 6px rgba(28, 22, 10, 0.04);
+  --shadow-lg: 0 12px 48px rgba(28, 22, 10, 0.09), 0 4px 16px rgba(28, 22, 10, 0.05);
+  --shadow-xl: 0 24px 80px rgba(28, 22, 10, 0.12), 0 8px 24px rgba(28, 22, 10, 0.06);
+  --shadow-gold: 0 6px 28px rgba(197, 168, 92, 0.22);
+  --shadow-gold-lg: 0 12px 40px rgba(197, 168, 92, 0.30);
+
+  /* Status */
+  --success:     #1e6641;
+  --success-bg:  rgba(30, 102, 65, 0.07);
+  --error:       #a5183e;
+  --error-bg:    rgba(165, 24, 62, 0.07);
+  --warning:     #b05c00;
+  --warning-bg:  rgba(176, 92, 0, 0.07);
+  --info:        #1a5c73;
+  --info-bg:     rgba(26, 92, 115, 0.07);
+
+  /* Transition presets */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-std:    cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition:  0.28s var(--ease-std);
 }
 
-/* Responsive Table Container styling */
-.tableContainer {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-bottom: 1.5rem;
-  border-radius: 12px;
-  border: 1px solid var(--border-gold);
-  background: var(--card-bg);
-  box-shadow: var(--shadow-sm);
-}
-
-.tableContainer table {
-  min-width: 600px;
-}
-
-* {
+/* ── Base Reset ──────────────────────────────────── */
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--background);
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(197, 168, 92, 0.06) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(197, 168, 92, 0.03) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.6) 0px, transparent 100%);
+  background-image:
+    radial-gradient(ellipse 80% 40% at 0% 0%, rgba(197, 168, 92, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 100% 100%, rgba(197, 168, 92, 0.04) 0%, transparent 60%);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: 'Outfit', 'Inter', sans-serif;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
   min-height: 100vh;
-  letter-spacing: -0.01em;
-  line-height: 1.5;
+  letter-spacing: -0.012em;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
   color: inherit;
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color var(--transition);
 }
 
-/* Premium White and Gold Scrollbars */
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* ── Scrollbar ───────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(197, 168, 92, 0.2) 0%, rgba(197, 168, 92, 0.6) 100%);
+  background: rgba(197, 168, 92, 0.22);
   border-radius: 99px;
-  border: 2px solid var(--background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--gold-hover);
+  background: rgba(197, 168, 92, 0.48);
 }
 
-/* Global focus styling for elements */
+/* ── Focus ───────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 2px;
+}
 input:focus, select:focus, textarea:focus {
   border-color: var(--gold-primary) !important;
   box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15) !important;
+  outline: none;
 }
 
-/* Smooth page load animations */
+/* ── Utilities ───────────────────────────────────── */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+.tableContainer table {
+  min-width: 600px;
+}
+
+/* ── Animations ──────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60%  { transform: translateX(-5px); }
+  40%, 80%  { transform: translateX(5px); }
+}
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(197, 168, 92, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(197, 168, 92, 0.12); }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-fade-in    { animation: fadeIn    0.35s var(--ease-out) forwards; }
+.animate-fade-in-up { animation: fadeInUp  0.40s var(--ease-out) forwards; }
+.animate-scale-in   { animation: scaleIn   0.30s var(--ease-spring) forwards; }
+
+/* ── Global Typography Helpers ───────────────────── */
+.page-title {
+  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Status Badges ───────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-error   { background: var(--error-bg);   color: var(--error);   }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-info    { background: var(--info-bg);    color: var(--info);    }
+.badge-gold    { background: var(--gold-100);   color: var(--gold-hover); }

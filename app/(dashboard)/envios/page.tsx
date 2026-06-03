@@ -8,9 +8,7 @@ import { Button } from '@/components/ui/Button'
 
 export default function EnviosPage() {
   const [sales, setSales] = useState<any[]>([])
-  const [monthlySales, setMonthlySales] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [loadingMonth, setLoadingMonth] = useState(false)
 
   // Report Modal state
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
@@ -20,11 +18,12 @@ export default function EnviosPage() {
   const [reportSales, setReportSales] = useState<any[]>([])
   const [reportLoading, setReportLoading] = useState(false)
 
-  // Calendar state
+  // Date range state
   const today = new Date()
-  const [currentYear, setCurrentYear] = useState(today.getFullYear())
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth()) // 0-indexed
-  const [selectedDate, setSelectedDate] = useState<Date>(today)
+  const todayStr = today.toISOString().split('T')[0]
+
+  const [startDate, setStartDate] = useState<string>(todayStr)
+  const [endDate, setEndDate] = useState<string>(todayStr)
 
   const months = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -35,12 +34,8 @@ export default function EnviosPage() {
   const years = Array.from({ length: 12 }, (_, i) => 2024 + i)
 
   useEffect(() => {
-    loadMonthlySales()
-  }, [currentYear, currentMonth])
-
-  useEffect(() => {
-    loadDailySales()
-  }, [selectedDate])
+    loadRangeSales()
+  }, [startDate, endDate])
 
   useEffect(() => {
     if (isReportModalOpen) {
@@ -69,25 +64,10 @@ export default function EnviosPage() {
     setReportLoading(false)
   }
 
-  const loadMonthlySales = async () => {
-    setLoadingMonth(true)
-    const start = new Date(currentYear, currentMonth, 1)
-    start.setHours(0,0,0,0)
-    const end = new Date(currentYear, currentMonth + 1, 0)
-    end.setHours(23,59,59,999)
-
-    const res = await getShippingSales(start, end)
-    if (res.success) setMonthlySales(res.sales)
-    setLoadingMonth(false)
-  }
-
-  const loadDailySales = async () => {
+  const loadRangeSales = async () => {
     setLoading(true)
-    const start = new Date(selectedDate)
-    start.setHours(0,0,0,0)
-    const end = new Date(selectedDate)
-    end.setHours(23,59,59,999)
-
+    const start = new Date(startDate + 'T00:00:00')
+    const end = new Date(endDate + 'T23:59:59')
     const res = await getShippingSales(start, end)
     if (res.success) setSales(res.sales)
     setLoading(false)
@@ -97,82 +77,15 @@ export default function EnviosPage() {
     const res = await updateShippingStatus(saleId, { [field]: !currentValue })
     if (res.success) {
       setSales(prev => prev.map(s => s.id === saleId ? { ...s, [field]: !currentValue } : s))
-      // Also update monthlySales to keep dots and checkboxes synced
-      setMonthlySales(prev => prev.map(s => s.id === saleId ? { ...s, [field]: !currentValue } : s))
     }
   }
 
-  // Navigation handlers
-  const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11)
-      setCurrentYear(prev => prev - 1)
-    } else {
-      setCurrentMonth(prev => prev - 1)
-    }
+  // Format range label
+  const formatDate = (str: string) => {
+    const [y, m, d] = str.split('-')
+    return `${d}/${m}/${y}`
   }
-
-  const handleNextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0)
-      setCurrentYear(prev => prev + 1)
-    } else {
-      setCurrentMonth(prev => prev + 1)
-    }
-  }
-
-  // Calendar cells calculation
-  const getCalendarCells = () => {
-    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay()
-    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
-    const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate()
-
-    const cells = []
-
-    // Previous month cells
-    for (let i = firstDayIndex - 1; i >= 0; i--) {
-      const day = daysInPrevMonth - i
-      const date = new Date(currentYear, currentMonth - 1, day)
-      cells.push({ day, isCurrentMonth: false, date })
-    }
-
-    // Current month cells
-    for (let i = 1; i <= daysInCurrentMonth; i++) {
-      const date = new Date(currentYear, currentMonth, i)
-      cells.push({ day: i, isCurrentMonth: true, date })
-    }
-
-    // Next month cells to fill 42 spaces
-    const totalSlots = 42
-    const remainingSlots = totalSlots - cells.length
-    for (let i = 1; i <= remainingSlots; i++) {
-      const date = new Date(currentYear, currentMonth + 1, i)
-      cells.push({ day: i, isCurrentMonth: false, date })
-    }
-
-    return cells
-  }
-
-  const hasSalesOnDate = (cellDate: Date) => {
-    return monthlySales.some(sale => {
-      const saleDate = new Date(sale.createdAt)
-      return saleDate.getDate() === cellDate.getDate() &&
-             saleDate.getMonth() === cellDate.getMonth() &&
-             saleDate.getFullYear() === cellDate.getFullYear()
-    })
-  }
-
-  const isSameDay = (d1: Date, d2: Date) => {
-    return d1.getDate() === d2.getDate() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getFullYear() === d2.getFullYear()
-  }
-
-  const formatDateString = (d: Date) => {
-    return d.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  }
-
-  const calendarCells = getCalendarCells()
+  const isSameRange = startDate === endDate
 
   return (
     <div className={styles.container}>
@@ -185,76 +98,88 @@ export default function EnviosPage() {
       </header>
 
       <div className={styles.layoutGrid}>
-        {/* COL 1: Calendar Side */}
+        {/* COL 1: Date Range Picker */}
         <aside className={styles.calendarArea}>
           <div className={styles.calendarCard}>
-            <div className={styles.calendarHeader}>
-              <button onClick={handlePrevMonth} className={styles.calendarNavBtn}>&lt;</button>
-              
-              <div className={styles.calendarSelectors}>
-                <select 
-                  value={currentMonth} 
-                  onChange={(e) => setCurrentMonth(Number(e.target.value))}
-                  className={styles.calendarSelect}
-                >
-                  {months.map((m, idx) => (
-                    <option key={m} value={idx}>{m}</option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={currentYear} 
-                  onChange={(e) => setCurrentYear(Number(e.target.value))}
-                  className={styles.calendarSelect}
-                >
-                  {years.map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+            <div className={styles.rangeHeader}>
+              <span className={styles.rangeIcon}>📅</span>
+              <span className={styles.rangeTitle}>Filtrar por Período</span>
+            </div>
+
+            <div className={styles.rangeFields}>
+              <div className={styles.rangeField}>
+                <label className={styles.rangeLabel}>Data Início</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  max={endDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className={styles.rangeInput}
+                />
               </div>
 
-              <button onClick={handleNextMonth} className={styles.calendarNavBtn}>&gt;</button>
+              <div className={styles.rangeArrow}>→</div>
+
+              <div className={styles.rangeField}>
+                <label className={styles.rangeLabel}>Data Fim</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={styles.rangeInput}
+                />
+              </div>
             </div>
 
-            <div className={styles.weekdaysGrid}>
-              <span>Dom</span>
-              <span>Seg</span>
-              <span>Ter</span>
-              <span>Qua</span>
-              <span>Qui</span>
-              <span>Sex</span>
-              <span>Sáb</span>
+            {/* Quick presets */}
+            <div className={styles.presets}>
+              <button
+                className={styles.presetBtn}
+                onClick={() => { setStartDate(todayStr); setEndDate(todayStr) }}
+              >
+                Hoje
+              </button>
+              <button
+                className={styles.presetBtn}
+                onClick={() => {
+                  const d = new Date(today)
+                  d.setDate(d.getDate() - 6)
+                  setStartDate(d.toISOString().split('T')[0])
+                  setEndDate(todayStr)
+                }}
+              >
+                7 dias
+              </button>
+              <button
+                className={styles.presetBtn}
+                onClick={() => {
+                  const d = new Date(today)
+                  d.setDate(d.getDate() - 29)
+                  setStartDate(d.toISOString().split('T')[0])
+                  setEndDate(todayStr)
+                }}
+              >
+                30 dias
+              </button>
+              <button
+                className={styles.presetBtn}
+                onClick={() => {
+                  const first = new Date(today.getFullYear(), today.getMonth(), 1)
+                  setStartDate(first.toISOString().split('T')[0])
+                  setEndDate(todayStr)
+                }}
+              >
+                Este mês
+              </button>
             </div>
 
-            <div className={styles.daysGrid}>
-              {calendarCells.map((cell, idx) => {
-                const cellIsSelected = isSameDay(cell.date, selectedDate)
-                const cellIsToday = isSameDay(cell.date, today)
-                const cellHasSales = hasSalesOnDate(cell.date)
-
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setSelectedDate(cell.date)
-                      // If user clicks a day in prev/next month, auto-adjust the view month
-                      if (cell.date.getMonth() !== currentMonth) {
-                        setCurrentMonth(cell.date.getMonth())
-                        setCurrentYear(cell.date.getFullYear())
-                      }
-                    }}
-                    className={`
-                      ${styles.calendarCell} 
-                      ${cell.isCurrentMonth ? styles.currentMonthDay : styles.otherMonthDay}
-                      ${cellIsSelected ? styles.selectedDay : ''}
-                      ${cellIsToday ? styles.today : ''}
-                    `}
-                  >
-                    <span>{cell.day}</span>
-                    {cellHasSales && <span className={styles.hasSalesDot}></span>}
-                  </button>
-                )
-              })}
+            {/* Summary badge */}
+            <div className={styles.rangeSummary}>
+              <span className={styles.rangeSummaryCount}>{loading ? '...' : sales.length}</span>
+              <span className={styles.rangeSummaryLabel}>
+                {sales.length === 1 ? 'envio encontrado' : 'envios encontrados'}
+              </span>
             </div>
           </div>
         </aside>
@@ -262,7 +187,10 @@ export default function EnviosPage() {
         {/* COL 2: Shipping List Side */}
         <main className={styles.listArea}>
           <h2 className={styles.selectedDateTitle}>
-            📅 {formatDateString(selectedDate)}
+            {isSameRange
+              ? `📅 ${formatDate(startDate)}`
+              : `📅 ${formatDate(startDate)} → ${formatDate(endDate)}`
+            }
           </h2>
 
           <div className={styles.salesGrid}>

@@ -180,144 +180,136 @@
 }
 
 .calendarCard {
-  padding: 1.5rem;
-  background: var(--surface-card);
-  border-radius: 16px;
+  padding: 1.75rem;
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
-.calendarHeader {
+/* ── Range Header ────────────────── */
+.rangeHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
-
-.calendarNavBtn {
-  background: transparent;
-  border: 1px solid var(--border-gold);
-  color: var(--gold-primary);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  transition: all 0.2s ease;
+.rangeIcon {
+  font-size: 1.15rem;
+  line-height: 1;
 }
-
-.calendarNavBtn:hover {
-  background: var(--gold-primary);
-  color: #fff;
-  border-color: var(--gold-primary);
-}
-
-.calendarSelectors {
-  display: flex;
-  gap: 0.4rem;
-  flex: 1;
-  justify-content: center;
-}
-
-.calendarSelect {
-  padding: 0.4rem 0.5rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-gold);
-  background: #fff;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--foreground);
-  outline: none;
-  cursor: pointer;
-}
-
-.calendarSelect:focus {
-  border-color: var(--gold-primary);
-}
-
-.weekdaysGrid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-  font-size: 0.75rem;
+.rangeTitle {
+  font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-  padding-bottom: 0.5rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
-.daysGrid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.4rem;
-}
-
-.calendarCell {
-  position: relative;
-  aspect-ratio: 1;
+/* ── Range Inputs ───────────────── */
+.rangeFields {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  font-weight: 500;
-  border-radius: 10px;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  color: var(--foreground);
-  transition: all 0.2s ease;
+  align-items: stretch;
+  gap: 0.6rem;
 }
-
-.calendarCell:hover:not(.emptyCell) {
-  background: var(--gold-light);
-  transform: scale(1.05);
+.rangeField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
-
-.currentMonthDay {
-  font-weight: 600;
-}
-
-.otherMonthDay {
-  color: #ccc;
-  opacity: 0.5;
-}
-
-.selectedDay {
-  background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-hover) 100%) !important;
-  color: #000 !important;
+.rangeLabel {
+  font-size: 0.72rem;
   font-weight: 700;
-  box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+.rangeInput {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: var(--text-primary);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+.rangeInput:hover { border-color: var(--border-hover); }
+.rangeInput:focus {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.14);
+}
+.rangeArrow {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  user-select: none;
+  padding: 0.1rem 0;
 }
 
-.today {
-  border: 1.5px solid var(--gold-primary);
+/* ── Quick Presets ──────────────── */
+.presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.presetBtn {
+  padding: 0.5rem 0.4rem;
+  background: var(--gold-50);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-std);
+  text-align: center;
+  letter-spacing: -0.005em;
+}
+.presetBtn:hover {
+  background: var(--gold-100);
+  border-color: var(--border-hover);
   color: var(--gold-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-xs);
+}
+.presetBtn:active {
+  transform: translateY(0);
 }
 
-.selectedDay.today {
-  border-color: transparent;
+/* ── Summary Badge ─────────────── */
+.rangeSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  background: var(--gold-50);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
 }
-
-.hasSalesDot {
-  position: absolute;
-  bottom: 4px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background-color: var(--gold-primary);
+.rangeSummaryCount {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
 }
-
-.selectedDay .hasSalesDot {
-  background-color: #000;
+.rangeSummaryLabel {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .listArea {

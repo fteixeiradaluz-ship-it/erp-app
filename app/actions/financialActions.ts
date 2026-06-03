@@ -106,16 +106,20 @@ export async function getDashboardStats() {
   }
 }
 
-export async function getFinancialFlow() {
+export async function getFinancialFlow(startDate?: Date, endDate?: Date) {
   const session = await getSession()
   if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
 
   try {
+    const dateFilter = startDate && endDate
+      ? { createdAt: { gte: startDate, lte: endDate } }
+      : {}
+
     const transactions = await prisma.transaction.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...dateFilter },
       include: { bank: true },
       orderBy: { createdAt: 'desc' },
-      take: 50
+      take: startDate && endDate ? undefined : 50 // sem limite quando filtra por período
     })
     
     const banks = await prisma.bank.findMany({
