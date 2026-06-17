@@ -15,7 +15,10 @@ export async function getSettings() {
         data: { 
           commissionPercentage: 0,
           taxPercentage: 0,
-          fixedExpensesPercentage: 0
+          fixedExpensesPercentage: 0,
+          retentionDays: 90,
+          whatsappTemplateRetention: "Olá {nome}! Notamos que já se passaram {dias} dias desde a sua última compra de {produto} na DERMAE. Gostaria de solicitar uma reposição?",
+          whatsappTemplateLead: "Olá {nome}! Passando para saber se ficou com alguma dúvida sobre o orçamento de R$ {valor} que geramos para você. Podemos agendar?"
         }
       })
     }
@@ -47,7 +50,10 @@ export async function updateSettings(data: {
   companyCnpj?: string,
   companyAddress?: string,
   companyPhone?: string,
-  companyLogo?: string
+  companyLogo?: string,
+  retentionDays?: number,
+  whatsappTemplateRetention?: string,
+  whatsappTemplateLead?: string
 }) {
   const session = await getSession()
   if (!session) return { error: 'Não autorizado' }
@@ -65,7 +71,10 @@ export async function updateSettings(data: {
           companyCnpj: data.companyCnpj ?? settings.companyCnpj,
           companyAddress: data.companyAddress ?? settings.companyAddress,
           companyPhone: data.companyPhone ?? settings.companyPhone,
-          companyLogo: data.companyLogo ?? settings.companyLogo
+          companyLogo: data.companyLogo ?? settings.companyLogo,
+          retentionDays: data.retentionDays ?? settings.retentionDays,
+          whatsappTemplateRetention: data.whatsappTemplateRetention ?? settings.whatsappTemplateRetention,
+          whatsappTemplateLead: data.whatsappTemplateLead ?? settings.whatsappTemplateLead
         }
       })
     } else {
@@ -78,7 +87,10 @@ export async function updateSettings(data: {
           companyCnpj: data.companyCnpj,
           companyAddress: data.companyAddress,
           companyPhone: data.companyPhone,
-          companyLogo: data.companyLogo
+          companyLogo: data.companyLogo,
+          retentionDays: data.retentionDays || 90,
+          whatsappTemplateRetention: data.whatsappTemplateRetention || "Olá {nome}! Notamos que já se passaram {dias} dias desde a sua última compra de {produto} na DERMAE. Gostaria de solicitar uma reposição?",
+          whatsappTemplateLead: data.whatsappTemplateLead || "Olá {nome}! Passando para saber se ficou com alguma dúvida sobre o orçamento de R$ {valor} que geramos para você. Podemos agendar?"
         }
       })
     }

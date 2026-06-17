@@ -16,7 +16,10 @@ export default function ConfiguracoesPage() {
     companyCnpj: '',
     companyAddress: '',
     companyPhone: '',
-    companyLogo: ''
+    companyLogo: '',
+    retentionDays: '90',
+    whatsappTemplateRetention: '',
+    whatsappTemplateLead: ''
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -33,7 +36,10 @@ export default function ConfiguracoesPage() {
           companyCnpj: res.settings.companyCnpj || '',
           companyAddress: res.settings.companyAddress || '',
           companyPhone: res.settings.companyPhone || '',
-          companyLogo: res.settings.companyLogo || ''
+          companyLogo: res.settings.companyLogo || '',
+          retentionDays: (res.settings.retentionDays || 90).toString(),
+          whatsappTemplateRetention: res.settings.whatsappTemplateRetention || '',
+          whatsappTemplateLead: res.settings.whatsappTemplateLead || ''
         })
       }
       setLoading(false)
@@ -67,7 +73,10 @@ export default function ConfiguracoesPage() {
       companyCnpj: formData.companyCnpj,
       companyAddress: formData.companyAddress,
       companyPhone: formData.companyPhone,
-      companyLogo: formData.companyLogo
+      companyLogo: formData.companyLogo,
+      retentionDays: parseInt(formData.retentionDays),
+      whatsappTemplateRetention: formData.whatsappTemplateRetention,
+      whatsappTemplateLead: formData.whatsappTemplateLead
     })
     if (res.success) {
       alert('Configurações salvas com sucesso!')
@@ -175,6 +184,44 @@ export default function ConfiguracoesPage() {
               <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
                 Esses valores serão usados no módulo de precificação para garantir que sua margem seja calculada sobre o preço de venda final.
               </p>
+            </div>
+          </div>
+
+          <div className={styles.section}>
+            <h2>CRM e WhatsApp (Mensagens e Recompras)</h2>
+            <div className={styles.inputGrid}>
+              <div className={styles.fullWidth}>
+                <Input 
+                  label="Intervalo Padrão para Sugestão de Recompra (Dias)" 
+                  type="number"
+                  min="1"
+                  value={formData.retentionDays}
+                  onChange={(e) => setFormData({...formData, retentionDays: e.target.value})}
+                  required
+                />
+              </div>
+              <div className={styles.fullWidth}>
+                <label className={styles.textareaLabel}>Template para Lembrar Recompra (Fidelização)</label>
+                <textarea 
+                  value={formData.whatsappTemplateRetention}
+                  onChange={(e) => setFormData({...formData, whatsappTemplateRetention: e.target.value})}
+                  className={styles.textarea}
+                  rows={3}
+                  required
+                />
+                <p className={styles.helpText}>Tags válidas: <code>{"{nome}"}</code>, <code>{"{produto}"}</code>, <code>{"{dias}"}</code></p>
+              </div>
+              <div className={styles.fullWidth}>
+                <label className={styles.textareaLabel}>Template para Follow-up de Orçamentos (Leads)</label>
+                <textarea 
+                  value={formData.whatsappTemplateLead}
+                  onChange={(e) => setFormData({...formData, whatsappTemplateLead: e.target.value})}
+                  className={styles.textarea}
+                  rows={3}
+                  required
+                />
+                <p className={styles.helpText}>Tags válidas: <code>{"{nome}"}</code>, <code>{"{valor}"}</code></p>
+              </div>
             </div>
           </div>
 

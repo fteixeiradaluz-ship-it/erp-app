@@ -114,9 +114,14 @@ export default function ClientesPage() {
       <div className={styles.header}>
         <div className={styles.headerTitleArea}>
           <h1>👥 Gestão de Clientes</h1>
-          <Link href="/clientes/reposicao" className={styles.crmLink}>
-            🔍 Ver Clientes para Reposição (CRM)
-          </Link>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+            <Link href="/clientes/reposicao" className={styles.crmLink}>
+              🔍 CRM: Reposição de Clientes
+            </Link>
+            <Link href="/clientes/leads" className={styles.crmLink}>
+              🎯 CRM: Oportunidades & Leads
+            </Link>
+          </div>
         </div>
         <div className={styles.controls}>
           <div className={styles.searchWrapper}>

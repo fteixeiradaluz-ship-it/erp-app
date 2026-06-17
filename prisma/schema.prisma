@@ -176,6 +176,9 @@ model Settings {
   commissionPercentage     Float    @default(0)
   taxPercentage            Float    @default(0)
   fixedExpensesPercentage  Float    @default(0)
+  retentionDays            Int      @default(90)
+  whatsappTemplateRetention String  @default("Olá {nome}! Notamos que já se passaram {dias} dias desde a sua última compra de {produto} na DERMAE. Gostaria de solicitar uma reposição?")
+  whatsappTemplateLead      String  @default("Olá {nome}! Passando para saber se ficou com alguma dúvida sobre o orçamento de R$ {valor} que geramos para você. Podemos agendar?")
   updatedAt                DateTime @updatedAt
 }
 

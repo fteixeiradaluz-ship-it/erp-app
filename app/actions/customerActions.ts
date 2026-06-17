@@ -125,12 +125,24 @@ export async function getRetentionList() {
   if (!session) return { error: 'Não autorizado' }
 
   try {
-    const threeMonthsAgo = new Date()
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+    // Buscar configurações de retenção e WhatsApp
+    let settings = await prisma.settings.findFirst()
+    if (!settings) {
+      settings = await prisma.settings.create({
+        data: { 
+          commissionPercentage: 0,
+          taxPercentage: 0,
+          fixedExpensesPercentage: 0,
+          retentionDays: 90,
+          whatsappTemplateRetention: "Olá {nome}! Notamos que já se passaram {dias} dias desde a sua última compra de {produto} na DERMAE. Gostaria de solicitar uma reposição?",
+          whatsappTemplateLead: "Olá {nome}! Passando para saber se ficou com alguma dúvida sobre o orçamento de R$ {valor} que geramos para você. Podemos agendar?"
+        }
+      })
+    }
 
-    // Clientes que não compram há mais de 3 meses
-    // Estratégia: Buscar clientes onde a última venda foi antes de threeMonthsAgo
-    // Ou clientes criados há mais de 3 meses que nunca compraram
+    const retentionDays = settings.retentionDays || 90
+    const retentionDate = new Date()
+    retentionDate.setDate(retentionDate.getDate() - retentionDays)
     
     const customers = await prisma.customer.findMany({
       where: {
@@ -139,24 +151,34 @@ export async function getRetentionList() {
           {
             sales: {
               none: {
-                createdAt: { gte: threeMonthsAgo }
+                createdAt: { gte: retentionDate }
               }
             },
-            createdAt: { lt: threeMonthsAgo }
+            createdAt: { lt: retentionDate }
           }
         ]
       },
       include: {
         sales: {
           orderBy: { createdAt: 'desc' },
+          include: {
+            items: {
+              include: { product: true }
+            }
+          },
           take: 1
         }
       }
     })
 
-    return { success: true, customers }
+    return { 
+      success: true, 
+      customers, 
+      template: settings.whatsappTemplateRetention, 
+      retentionDays 
+    }
   } catch (err: any) {
-    return { error: 'Erro ao buscar lista de retenção' }
+    return { error: 'Erro ao buscar lista de retenção: ' + err.message }
   }
 }
 

@@ -108,3 +108,48 @@ export async function convertQuotationToSale(id: string, paymentMethod: string) 
     return { error: 'Erro ao converter orçamento' }
   }
 }
+
+export async function getOpenQuotationsCRM() {
+  const session = await getSession()
+  if (!session) return { error: 'Não autorizado' }
+
+  try {
+    const threeDaysAgo = new Date()
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+
+    // Buscar configurações para pegar o template do WhatsApp
+    let settings = await prisma.settings.findFirst()
+    if (!settings) {
+      settings = await prisma.settings.create({
+        data: { 
+          commissionPercentage: 0,
+          taxPercentage: 0,
+          fixedExpensesPercentage: 0,
+          retentionDays: 90,
+          whatsappTemplateRetention: "Olá {nome}! Notamos que já se passaram {dias} dias desde a sua última compra de {produto} na DERMAE. Gostaria de solicitar uma reposição?",
+          whatsappTemplateLead: "Olá {nome}! Passando para saber se ficou com alguma dúvida sobre o orçamento de R$ {valor} que geramos para você. Podemos agendar?"
+        }
+      })
+    }
+
+    const quotations = await prisma.quotation.findMany({
+      where: {
+        status: 'OPEN',
+        createdAt: { lt: threeDaysAgo }
+      },
+      include: {
+        customer: true,
+        items: true
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return { 
+      success: true, 
+      quotations, 
+      template: settings.whatsappTemplateLead 
+    }
+  } catch (err: any) {
+    return { error: 'Erro ao buscar orçamentos abertos para CRM: ' + err.message }
+  }
+}
