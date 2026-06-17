@@ -327,7 +327,7 @@ export async function getPendingPayables() {
     if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
 
     try {
-        // Garantir que as contas de cartões e opções de pagamento solicitadas pelo usuário existem
+        // Garantir que as contas de cartões e opções de pagamento solicitadas pelo usuário existem de forma eficiente (1 única query)
         const requiredBanks = [
             "cartao empresa Nubank",
             "Cartão Empresa Itaú",
@@ -336,18 +336,21 @@ export async function getPendingPayables() {
             "Boleto Bancário",
             "Débito em Conta"
         ];
-        for (const bankName of requiredBanks) {
-            const exists = await prisma.bank.findFirst({
-                where: { name: bankName }
+        
+        const existingBanks = await prisma.bank.findMany({
+            where: { name: { in: requiredBanks } },
+            select: { name: true }
+        });
+        const existingNames = new Set(existingBanks.map(b => b.name));
+        
+        const missingBanks = requiredBanks.filter(name => !existingNames.has(name));
+        if (missingBanks.length > 0) {
+            await prisma.bank.createMany({
+                data: missingBanks.map(name => ({
+                    name,
+                    balance: 0
+                }))
             });
-            if (!exists) {
-                await prisma.bank.create({
-                    data: {
-                        name: bankName,
-                        balance: 0
-                    }
-                });
-            }
         }
 
         const transactions = await prisma.transaction.findMany({

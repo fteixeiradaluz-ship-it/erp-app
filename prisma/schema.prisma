@@ -51,6 +51,9 @@ model Customer {
   deletedAt       DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([deletedAt])
+  @@index([createdAt])
 }
 
 model Product {
@@ -66,6 +69,9 @@ model Product {
   deletedAt  DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+
+  @@index([deletedAt])
+  @@index([supplierId])
 }
 
 model Supplier {
@@ -102,6 +108,11 @@ model Sale {
   transactions          Transaction[]
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+  @@index([customerId])
+  @@index([deletedAt])
+  @@index([createdAt])
 }
 
 model SaleItem {
@@ -146,6 +157,13 @@ model Transaction {
   deletionJustification String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([bankId])
+  @@index([type])
+  @@index([status])
+  @@index([deletedAt])
+  @@index([dueDate])
+  @@index([createdAt])
 }
 
 model Settings {
@@ -169,6 +187,9 @@ model AuditLog {
   entity    String   // e.g., Product, User
   details   String?  // JSON stringified details
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Appointment {
@@ -192,6 +213,11 @@ model Appointment {
   updatedAt       DateTime    @updatedAt
   
   medicalRecord   MedicalRecord?
+
+  @@index([customerId])
+  @@index([date])
+  @@index([status])
+  @@index([originalApptId])
 }
 
 model MedicalRecord {
