@@ -480,8 +480,8 @@ export async function getCashFlowForecast() {
 
   try {
     const now = new Date()
-    const currentBank = await prisma.bank.findFirst()
-    const baseBalance = currentBank ? currentBank.balance : 0
+    const banks = await prisma.bank.findMany()
+    const baseBalance = banks.reduce((sum, b) => sum + b.balance, 0)
 
     // Fetch all pending transactions (both Income and Expense) with a due date
     const pendingTransactions = await prisma.transaction.findMany({
@@ -498,8 +498,9 @@ export async function getCashFlowForecast() {
     let rollingBalance = baseBalance
 
     for (let i = 0; i < 12; i++) {
-      const monthDate = new Date()
-      monthDate.setMonth(now.getMonth() + i)
+      // Safe month calculation avoiding month-overflow bugs (e.g. 31st to short months)
+      const monthDate = new Date(now.getFullYear(), now.getMonth(), 1)
+      monthDate.setMonth(monthDate.getMonth() + i)
       const year = monthDate.getFullYear()
       const month = monthDate.getMonth() // 0-indexed
 
@@ -536,5 +537,49 @@ export async function getCashFlowForecast() {
     return { success: true, baseBalance, projection }
   } catch (err: any) {
     return { error: 'Erro ao calcular projeção de fluxo de caixa: ' + err.message }
+  }
+}
+
+export async function getCommissionsData() {
+  const session = await getSession()
+  if (!session) return { error: 'Não autorizado' }
+
+  try {
+    const isClientAdmin = session.role === 'ADMIN'
+    const userFilter = isClientAdmin ? {} : { userId: session.userId }
+
+    const commissionTransactions = await prisma.transaction.findMany({
+      where: {
+        ...userFilter,
+        deletedAt: null,
+        type: 'EXPENSE',
+        description: {
+          contains: 'Repasse Profissional'
+        }
+      },
+      include: {
+        user: { select: { id: true, name: true, role: true } },
+        bank: { select: { id: true, name: true } },
+        sale: { select: { id: true, totalAmount: true, customer: { select: { name: true } } } }
+      },
+      orderBy: { dueDate: 'desc' }
+    })
+
+    let usersList: any[] = []
+    if (isClientAdmin) {
+      usersList = await prisma.user.findMany({
+        select: { id: true, name: true, role: true }
+      })
+    }
+
+    return { 
+      success: true, 
+      transactions: commissionTransactions, 
+      users: usersList, 
+      role: session.role,
+      currentUserId: session.userId
+    }
+  } catch (err: any) {
+    return { error: 'Erro ao carregar dados de comissão: ' + err.message }
   }
 }

@@ -193,3 +193,66 @@
   gap: 1rem;
   margin-top: 1.5rem;
 }
+
+/* DRE Styles */
+.dreContainer {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dreCard {
+  background: #fff;
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.dreTitle {
+  font-size: 1.25rem;
+  color: var(--gold-primary);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--border-gold);
+  padding-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dreRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px dashed #f0f0f0;
+  font-size: 0.95rem;
+}
+
+.dreRowSubtotal {
+  font-weight: 700;
+  border-top: 1px solid var(--border-gold);
+  border-bottom: 2px solid var(--border-gold);
+  padding: 0.8rem 0;
+  font-size: 1rem;
+}
+
+.dreRowNetProfit {
+  font-weight: 800;
+  border-top: 2px solid var(--gold-primary);
+  border-bottom: 2px solid var(--gold-primary);
+  background: rgba(212, 175, 55, 0.05);
+  padding: 1rem;
+  margin-top: 0.5rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+}
+
+.dreValuePositive {
+  color: var(--success, #4caf50);
+}
+
+.dreValueNegative {
+  color: var(--error, #f44336);
+}

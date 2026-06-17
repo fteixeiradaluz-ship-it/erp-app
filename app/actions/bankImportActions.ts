@@ -9,7 +9,9 @@ export async function parseBankStatement(formData: FormData) {
   if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
 
   const file = formData.get('file') as File
+  const bankId = formData.get('bankId') as string
   if (!file) return { error: 'Arquivo não encontrado' }
+  if (!bankId) return { error: 'Conta bancária de destino não especificada' }
 
   const content = await file.text()
   const fileName = file.name.toLowerCase()
@@ -25,9 +27,9 @@ export async function parseBankStatement(formData: FormData) {
       return { error: 'Formato de arquivo não suportado. Use .ofx ou .csv' }
     }
 
-    // Buscar lançamentos pendentes para conciliação automática
+    // Buscar lançamentos pendentes para conciliação automática (filtrando por conta de destino)
     const pending = await prisma.transaction.findMany({
-      where: { status: 'PENDING', deletedAt: null },
+      where: { status: 'PENDING', deletedAt: null, bankId: bankId },
       orderBy: { dueDate: 'asc' }
     })
 

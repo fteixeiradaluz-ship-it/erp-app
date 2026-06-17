@@ -46,6 +46,7 @@ export default function FinanceiroPage() {
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [importPreview, setImportPreview] = useState<any[]>([])
   const [importing, setImporting] = useState(false)
+  const [importBankId, setImportBankId] = useState('')
 
   useEffect(() => {
     load()
@@ -56,8 +57,11 @@ export default function FinanceiroPage() {
     const res = await getFinancialFlow()
     if (res.success) {
       setData(res)
-      if (res.banks.length > 0 && !txForm.bankId) {
-        setTxForm(prev => ({ ...prev, bankId: res.banks[0].id }))
+      if (res.banks.length > 0) {
+        if (!txForm.bankId) {
+          setTxForm(prev => ({ ...prev, bankId: res.banks[0].id }))
+        }
+        setImportBankId(prev => prev || res.banks[0].id)
       }
     }
     
@@ -147,8 +151,12 @@ export default function FinanceiroPage() {
     const file = e.target.files?.[0]
     if (!file) return
     
+    const bankIdToUse = importBankId || data.banks[0]?.id
+    if (!bankIdToUse) return alert('Por favor, selecione uma conta bancária primeiro.')
+
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('bankId', bankIdToUse)
     
     const res = await parseBankStatement(formData)
     if (res.success) {
@@ -175,6 +183,18 @@ export default function FinanceiroPage() {
               setIsLogModalOpen(true)
             }
           }}>📜 Ver Histórico</Button>
+          {banks.length > 0 && (
+            <select
+              value={importBankId}
+              onChange={(e) => setImportBankId(e.target.value)}
+              className={styles.select}
+              style={{ width: 'auto', padding: '0.5rem 1rem', border: '1px solid var(--border-gold)', borderRadius: '8px', fontSize: '0.9rem', cursor: 'pointer' }}
+            >
+              {banks.map((b: any) => (
+                <option key={b.id} value={b.id}>Extrato: {b.name}</option>
+              ))}
+            </select>
+          )}
           <label className={`${styles.actionBtn} ${styles.importBtn}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>
             📥 Importar Extrato
             <input type="file" hidden accept=".ofx,.csv" onChange={handleImportFile} />
@@ -497,7 +517,17 @@ export default function FinanceiroPage() {
             <Card>
               <div className={styles.modalContent}>
                 <h2>Confirmar Importação de Extrato</h2>
-                <p>Selecione as transações que deseja importar para o banco: <strong>{banks[0]?.name}</strong></p>
+                <p>Selecione as transações que deseja importar para o banco:</p>
+                <select 
+                  className={styles.select}
+                  value={importBankId}
+                  onChange={(e) => setImportBankId(e.target.value)}
+                  style={{ marginBottom: '1rem' }}
+                >
+                  {banks.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
                 
                 <div className={styles.tableWrapper} style={{ maxHeight: '400px', overflowY: 'auto' }}>
                   <table className={styles.table}>
@@ -557,8 +587,9 @@ export default function FinanceiroPage() {
                       if (importPreview.filter(p => p.selected !== false).length === 0) return alert('Selecione ao menos uma transação.')
                       setImporting(true)
                       const selected = importPreview.filter(p => p.selected !== false)
+                      const targetBankId = importBankId || banks[0]?.id
                       const res = await bulkImportTransactions({
-                        bankId: banks[0].id,
+                        bankId: targetBankId,
                         transactions: selected
                       })
                       setImporting(false)

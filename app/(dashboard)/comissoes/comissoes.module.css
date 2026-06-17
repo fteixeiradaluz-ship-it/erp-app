@@ -1,0 +1,154 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  color: var(--gold-primary);
+  font-weight: 700;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.statsCard {
+  background: #fff;
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.statsTitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statsValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.filters {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-end;
+  padding: 1.5rem;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+}
+
+.select {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--background);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.select:focus {
+  border-color: var(--gold-primary);
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-gold);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.table th {
+  text-align: left;
+  padding: 1rem;
+  background: rgba(212, 175, 55, 0.05);
+  color: var(--gold-primary);
+  font-size: 0.85rem;
+  border-bottom: 2px solid var(--border-gold);
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--background);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.table tr:hover {
+  background: var(--surface-hover);
+}
+
+.statusPaid {
+  background: rgba(76, 175, 80, 0.15);
+  color: var(--success);
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.statusPending {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--gold-hover);
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.payBtn {
+  background: var(--gold-primary);
+  color: #000;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.8rem;
+}
+
+.payBtn:hover {
+  background: var(--gold-hover);
+  transform: translateY(-1px);
+}
+
+.payBtn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}

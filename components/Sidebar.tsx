@@ -19,6 +19,7 @@ export default function Sidebar({ role, permissions, logo, companyName, isOpen, 
     { label: 'Agenda', path: '/agenda', icon: '📅', token: 'agenda' },
     { label: 'Envios', path: '/envios', icon: '📦', token: 'envios' },
     { label: 'Relatórios', path: '/relatorios', icon: '📈', token: 'relatorios' },
+    { label: 'Comissões', path: '/comissoes', icon: '💼', token: 'comissoes' },
     { label: 'Clientes', path: '/clientes', icon: '👥', token: 'clientes' },
     { label: 'Fornecedores', path: '/fornecedores', icon: '🏭', token: 'fornecedores' },
     { label: 'Estoque', path: '/estoque', icon: '📦', token: 'estoque' },
@@ -33,11 +34,11 @@ export default function Sidebar({ role, permissions, logo, companyName, isOpen, 
   let activePermissions = permissions || ''
   if (!activePermissions) {
     if (role === 'ADMIN') {
-      activePermissions = 'dashboard,pos,agenda,envios,relatorios,clientes,fornecedores,estoque,precificacao,financeiro,contas-pagar,logs,usuarios,configuracoes'
+      activePermissions = 'dashboard,pos,agenda,envios,relatorios,comissoes,clientes,fornecedores,estoque,precificacao,financeiro,contas-pagar,logs,usuarios,configuracoes'
     } else if (role === 'SECRETARY') {
-      activePermissions = 'dashboard,pos,agenda,relatorios,clientes'
+      activePermissions = 'dashboard,pos,agenda,relatorios,comissoes,clientes'
     } else {
-      activePermissions = 'dashboard,pos,envios,relatorios,clientes'
+      activePermissions = 'dashboard,pos,envios,relatorios,comissoes,clientes'
     }
   }
 

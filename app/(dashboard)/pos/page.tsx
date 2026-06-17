@@ -13,6 +13,7 @@ import rStyles from './receipt.module.css'
 type Product = { id: string; name: string; price: number; stock: number; type: string; }
 type Customer = { id: string; name: string; }
 type CartItem = Product & { quantity: number; }
+type Bank = { id: string; name: string; balance: number; }
 
 export default function POSPage() {
   return (
@@ -35,6 +36,8 @@ function POSPageContent() {
   const [submitting, setSubmitting] = useState(false)
   const [saleResult, setSaleResult] = useState<any>(null)
   const [settings, setSettings] = useState<any>(null)
+  const [banks, setBanks] = useState<Bank[]>([])
+  const [selectedBank, setSelectedBank] = useState<string>('')
 
   // Prepayment / Signal state from appointment
   const [depositAmount, setDepositAmount] = useState(0)
@@ -50,6 +53,11 @@ function POSPageContent() {
       const loadedProducts = (posData.products || []) as Product[]
       setProducts(loadedProducts)
       setCustomers(posData.customers)
+      const loadedBanks = (posData.banks || []) as Bank[]
+      setBanks(loadedBanks)
+      if (loadedBanks.length > 0) {
+        setSelectedBank(loadedBanks[0].id)
+      }
       if (settingsData.success) setSettings(settingsData.settings)
       
       // Auto-select customer from query param
@@ -110,6 +118,7 @@ function POSPageContent() {
   const handleCheckout = async () => {
     if (!selectedCustomer) return alert('Selecione um cliente!')
     if (cart.length === 0) return alert('Carrinho vazio!')
+    if (!selectedBank) return alert('Selecione uma conta bancária de destino!')
     
     setSubmitting(true)
     const result = await submitSale({
@@ -119,7 +128,8 @@ function POSPageContent() {
       discount: (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') ? discount : 0,
       items: cart.map(item => ({ productId: item.id, quantity: item.quantity, price: item.price })),
       depositApplied: depositAmount,
-      appointmentId: appointmentId || undefined
+      appointmentId: appointmentId || undefined,
+      bankId: selectedBank
     })
 
     if (result.error) {
@@ -237,6 +247,14 @@ function POSPageContent() {
                 <option value="PIX">PIX</option>
                 <option value="A_VISTA">À Vista (Dinheiro)</option>
                 <option value="CARTAO">Cartão de Crédito</option>
+              </select>
+            </div>
+
+            <div className={styles.field}>
+              <label>Depositar em (Conta Bancária)</label>
+              <select value={selectedBank} onChange={e => setSelectedBank(e.target.value)} className={styles.select}>
+                <option value="">-- Selecione --</option>
+                {banks.map(b => <option key={b.id} value={b.id}>{b.name} (Saldo: R$ {b.balance.toFixed(2)})</option>)}
               </select>
             </div>
 

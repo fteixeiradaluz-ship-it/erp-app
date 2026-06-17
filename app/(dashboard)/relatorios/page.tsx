@@ -18,6 +18,7 @@ export default function RelatoriosPage() {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [globalCommission, setGlobalCommission] = useState(0)
+  const [dre, setDre] = useState<any>(null)
 
   // Filters
   const [startDate, setStartDate] = useState('')
@@ -142,7 +143,10 @@ export default function RelatoriosPage() {
     if (res?.success) {
       if (activeTab === 'sales' || activeTab === 'deleted_sales') setData(res.sales)
       else if (activeTab === 'inventory') setData(res.products)
-      else if (activeTab === 'financial') setData(res.transactions)
+      else if (activeTab === 'financial') {
+        setData(res.transactions)
+        setDre(res.dre)
+      }
       else if (activeTab === 'appointments') setData(res.appointments)
       else if (activeTab === 'shipping') setData(res.shipments)
     } else {
@@ -385,6 +389,60 @@ export default function RelatoriosPage() {
         </div>
         <Button onClick={exportCSV}>📤 Exportar CSV</Button>
       </Card>
+
+      {activeTab === 'financial' && dre && (
+        <div className={styles.dreContainer}>
+          <div className={styles.dreCard}>
+            <div className={styles.dreTitle}>
+              <span>📊 Demonstrativo do Resultado do Exercício (DRE)</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: '500', color: 'var(--text-secondary)' }}>
+                Imposto: {dre.taxPercentage}% | Custo Fixo: {dre.fixedExpensesPercentage}%
+              </span>
+            </div>
+            
+            <div className={styles.dreRow}>
+              <span>Receita Bruta (Faturamento)</span>
+              <span className={dre.grossRevenue >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
+                + {formatCurrency(dre.grossRevenue)}
+              </span>
+            </div>
+            
+            <div className={styles.dreRow}>
+              <span>(-) Custo das Mercadorias Vendidas (CMV)</span>
+              <span className={styles.dreValueNegative}>- {formatCurrency(dre.cmv)}</span>
+            </div>
+            
+            <div className={`${styles.dreRow} ${styles.dreRowSubtotal}`}>
+              <span>(=) Margem Bruta</span>
+              <span className={dre.grossMargin >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
+                {formatCurrency(dre.grossMargin)}
+              </span>
+            </div>
+            
+            <div className={styles.dreRow}>
+              <span>(-) Impostos Provisionados</span>
+              <span className={styles.dreValueNegative}>- {formatCurrency(dre.taxAmount)}</span>
+            </div>
+            
+            <div className={styles.dreRow}>
+              <span>(-) Repasse de Comissões (Vendedores)</span>
+              <span className={styles.dreValueNegative}>- {formatCurrency(dre.commissionsAmount)}</span>
+            </div>
+            
+            <div className={styles.dreRow}>
+              <span>(-) Custos Fixos & Despesas Operacionais</span>
+              <span className={styles.dreValueNegative}>- {formatCurrency(dre.operationalCost)}</span>
+            </div>
+            
+            <div className={`${styles.dreRow} ${styles.dreRowNetProfit}`}>
+              <span>(=) Lucro Líquido Real</span>
+              <span className={dre.netProfit >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
+                {formatCurrency(dre.netProfit)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>

@@ -11,6 +11,7 @@ export async function submitSale(data: {
   items: { productId: string, quantity: number, price: number }[];
   depositApplied?: number;
   appointmentId?: string;
+  bankId?: string;
 }) {
   const session = await getSession();
   if (!session) return { error: 'Não autorizado' };
@@ -65,27 +66,67 @@ export async function submitSale(data: {
         }
       }
 
-      // 3. Inserir no Financeiro
-      let bank = await tx.bank.findFirst();
-      if (!bank) {
-        bank = await tx.bank.create({
-          data: { name: 'Caixa Geral', balance: 0 }
+      // 3. Obter Banco de Destino
+      let selectedBankId = data.bankId;
+      if (!selectedBankId) {
+        let bank = await tx.bank.findFirst();
+        if (!bank) {
+          bank = await tx.bank.create({
+            data: { name: 'Caixa Geral', balance: 0 }
+          });
+        }
+        selectedBankId = bank.id;
+      } else {
+        const bankExists = await tx.bank.findUnique({ where: { id: selectedBankId } });
+        if (!bankExists) {
+          throw new Error('Banco de destino selecionado não existe.');
+        }
+      }
+
+      // 4. Inserir Transação(ões) no Financeiro (com divisão de parcelas se for cartão)
+      const isCreditCard = data.paymentMethod === 'CARTAO';
+      const installments = data.installments && data.installments > 1 ? data.installments : 1;
+
+      if (isCreditCard) {
+        const feePercent = installments > 1 ? 0.035 : 0.025;
+        const grossInstallment = totalAmount / installments;
+        const netInstallment = grossInstallment * (1 - feePercent);
+
+        for (let i = 1; i <= installments; i++) {
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + i * 30);
+
+          await tx.transaction.create({
+            data: {
+              bankId: selectedBankId,
+              type: 'INCOME',
+              amount: netInstallment,
+              description: `Venda #${newSale.id.slice(0, 6)} - Parcela ${i}/${installments}`,
+              status: 'PENDING',
+              dueDate: dueDate,
+              saleId: newSale.id,
+              userId: session.userId,
+            }
+          });
+        }
+      } else {
+        // PIX, DINHEIRO ou A_VISTA - Considerado pago na hora
+        await tx.transaction.create({
+          data: {
+            bankId: selectedBankId,
+            type: 'INCOME',
+            amount: totalAmount,
+            description: `Venda #${newSale.id.slice(0, 6)}`,
+            status: 'PAID',
+            dueDate: new Date(),
+            payDate: new Date(),
+            saleId: newSale.id,
+            userId: session.userId,
+          }
         });
       }
 
-      // Para cartão, se parcelado, podemos lançar como uma única pendente com a info
-      await tx.transaction.create({
-        data: {
-          bankId: bank.id,
-          type: 'INCOME',
-          amount: totalAmount,
-          description: `Venda #${newSale.id.slice(0,6)}${data.installments && data.installments > 1 ? ` (${data.installments}x)` : ''}`,
-          status: data.paymentMethod === 'CARTAO' ? 'PENDING' : 'PAID',
-          dueDate: data.paymentMethod === 'CARTAO' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : new Date(),
-        }
-      });
-
-      // Calcular e lançar repasse de comissão do profissional
+      // 5. Calcular e lançar repasse de comissão do profissional
       const seller = await tx.user.findUnique({
         where: { id: session.userId },
         select: { name: true, commissionPercent: true }
@@ -106,21 +147,47 @@ export async function submitSale(data: {
 
         await tx.transaction.create({
           data: {
-            bankId: bank.id,
+            bankId: selectedBankId,
             type: 'EXPENSE',
             amount: commissionAmount,
             description: `Repasse Profissional: Comissão Venda #${newSale.id.slice(0, 6)} - ${seller?.name || 'Vendedor'}`,
             status: 'PENDING',
             dueDate: nextMonthDate,
-            payDate: null
+            payDate: null,
+            saleId: newSale.id,
+            userId: session.userId
+          }
+        });
+      }
+
+      // 6. Provisão de Impostos baseada na alíquota global
+      const taxPercentage = settings ? (settings.taxPercentage || 0) : 0;
+      const taxAmount = totalAmount * (taxPercentage / 100);
+
+      if (taxAmount > 0) {
+        const nextMonthTaxDate = new Date();
+        nextMonthTaxDate.setMonth(nextMonthTaxDate.getMonth() + 1);
+        nextMonthTaxDate.setDate(15); // Impostos provisionados para dia 15
+        nextMonthTaxDate.setHours(0, 0, 0, 0);
+
+        await tx.transaction.create({
+          data: {
+            bankId: selectedBankId,
+            type: 'EXPENSE',
+            amount: taxAmount,
+            description: `Provisão de Imposto: Venda #${newSale.id.slice(0, 6)}`,
+            status: 'PENDING',
+            dueDate: nextMonthTaxDate,
+            payDate: null,
+            saleId: newSale.id
           }
         });
       }
       
-      // Update bank balance if PAID
+      // Update bank balance if PAID (not credit card)
       if (data.paymentMethod !== 'CARTAO') {
         await tx.bank.update({
-          where: { id: bank.id },
+          where: { id: selectedBankId },
           data: { balance: { increment: totalAmount } }
         });
       }
@@ -145,7 +212,7 @@ export async function submitSale(data: {
 
 export async function getPOSData() {
   const session = await getSession();
-  if (!session) return { customers: [], products: [] };
+  if (!session) return { customers: [], products: [], banks: [] };
 
   const customers = await prisma.customer.findMany({ 
     where: { deletedAt: null },
@@ -155,7 +222,10 @@ export async function getPOSData() {
     where: { deletedAt: null },
     select: { id: true, name: true, price: true, stock: true, type: true }
   });
-  return { customers, products };
+  const banks = await prisma.bank.findMany({
+    select: { id: true, name: true, balance: true }
+  });
+  return { customers, products, banks };
 }
 
 export async function deleteSale(id: string, reason: string) {

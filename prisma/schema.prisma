@@ -25,6 +25,7 @@ model User {
   permissions        String     @default("")
   commissionPercent  Float?     // Nullable to fallback to global Settings.commissionPercentage if needed
   sales              Sale[]
+  transactions       Transaction[]
   logs               AuditLog[]
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
@@ -98,6 +99,7 @@ model Sale {
   
   deletedAt             DateTime?
   deletionJustification String?
+  transactions          Transaction[]
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
@@ -133,6 +135,13 @@ model Transaction {
   status      String   @default("PENDING") // PENDING, PAID
   dueDate     DateTime?
   payDate     DateTime?
+  
+  // Relations
+  userId                String?
+  user                  User?     @relation(fields: [userId], references: [id])
+  saleId                String?
+  sale                  Sale?     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
   deletedAt             DateTime?
   deletionJustification String?
   createdAt   DateTime @default(now())
