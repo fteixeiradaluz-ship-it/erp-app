@@ -282,7 +282,7 @@ function POSPageContent() {
               <label>Depositar em (Conta Bancária)</label>
               <select value={selectedBank} onChange={e => setSelectedBank(e.target.value)} className={styles.select}>
                 <option value="">-- Selecione --</option>
-                {banks.map(b => <option key={b.id} value={b.id}>{b.name} (Saldo: R$ {b.balance.toFixed(2)})</option>)}
+                {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
 

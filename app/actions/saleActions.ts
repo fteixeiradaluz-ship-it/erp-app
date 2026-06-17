@@ -222,9 +222,26 @@ export async function getPOSData() {
     where: { deletedAt: null },
     select: { id: true, name: true, price: true, stock: true, type: true }
   });
-  const banks = await prisma.bank.findMany({
+  
+  // Buscar os bancos cadastrados
+  const allBanks = await prisma.bank.findMany({
     select: { id: true, name: true, balance: true }
   });
+
+  // Filtrar para remover cartões (qualquer um que tenha "cartao" ou "cartão" no nome)
+  const filteredBanks = allBanks.filter(b => 
+    !b.name.toLowerCase().includes('cartão') && 
+    !b.name.toLowerCase().includes('cartao')
+  );
+
+  // Se o usuário não for ADMIN, zera o saldo por questões de privacidade
+  const isAdmin = session.role === 'ADMIN';
+  const banks = filteredBanks.map(b => ({
+    id: b.id,
+    name: b.name,
+    balance: isAdmin ? b.balance : 0
+  }));
+
   return { customers, products, banks };
 }
 
