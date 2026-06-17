@@ -9,7 +9,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   
   const res = await getSettings()
   const logo = res.success ? res.settings.companyLogo : null
-  const companyName = res.success ? res.settings.companyName : 'ERP Premium'
+  const companyName = res.success && res.settings.companyName ? res.settings.companyName : 'DERMAE INSTITUTO DE ESTÉTICA INTEGRATIVA'
 
   return (
     <DashboardContainer role={role} permissions={permissions} logo={logo} companyName={companyName}>

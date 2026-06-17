@@ -2,7 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'ERP Premium',
+  title: 'DERMAE INSTITUTO DE ESTÉTICA INTEGRATIVA',
   description: 'Sistema ERP de Alto Padrão',
 }
 

@@ -300,7 +300,7 @@ EXAMES SOLICITADOS:
                     <img src={clinicLogo} alt="Clinic Logo" style={{ maxHeight: '45px', marginBottom: '0.3rem' }} />
                   ) : (
                     <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--gold-primary)', fontFamily: 'serif', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
-                      ⚜ {appt?.settings?.companyName || "ERP Premium Estética"}
+                      ⚜ {appt?.settings?.companyName || "DERMAE INSTITUTO DE ESTÉTICA INTEGRATIVA"}
                     </div>
                   )}
                   <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#111', fontFamily: 'serif' }}>{docName}</div>
