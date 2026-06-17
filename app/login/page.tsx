@@ -15,13 +15,20 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showForgotModal, setShowForgotModal] = useState(false)
   const [greeting, setGreeting] = useState('Olá!')
+  const [loadingLogo, setLoadingLogo] = useState(true)
 
   useEffect(() => {
     async function fetchLogo() {
-      const res = await getPublicSettings()
-      if (res.success && res.settings) {
-        if (res.settings.companyLogo) setLogo(res.settings.companyLogo)
-        if (res.settings.companyName) setCompanyName(res.settings.companyName)
+      try {
+        const res = await getPublicSettings()
+        if (res.success && res.settings) {
+          if (res.settings.companyLogo) setLogo(res.settings.companyLogo)
+          if (res.settings.companyName) setCompanyName(res.settings.companyName)
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoadingLogo(false)
       }
     }
     fetchLogo()
@@ -65,7 +72,9 @@ export default function LoginPage() {
 
       <div className={styles.card}>
         <div className={styles.logoContainer}>
-          {logo ? (
+          {loadingLogo ? (
+            <div style={{ height: '80px', width: '280px' }} />
+          ) : logo ? (
             <img 
               src={logo} 
               alt="Logo da Empresa" 
