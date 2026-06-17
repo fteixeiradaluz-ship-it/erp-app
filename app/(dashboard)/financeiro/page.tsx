@@ -48,29 +48,39 @@ export default function FinanceiroPage() {
   const [importing, setImporting] = useState(false)
   const [importBankId, setImportBankId] = useState('')
 
-  useEffect(() => {
-    load()
-  }, [])
+  // Date range filter state
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate]     = useState<string>('')
 
-  async function load() {
+  useEffect(() => {
+    load(startDate, endDate)
+  }, [startDate, endDate])
+
+  // initial load (no filter)
+  useEffect(() => { load('', '') }, [])
+
+  async function load(start?: string, end?: string) {
     setLoading(true)
-    const res = await getFinancialFlow()
+    const startObj = start ? new Date(start + 'T00:00:00') : undefined
+    const endObj   = end   ? new Date(end   + 'T23:59:59') : undefined
+    const res = await getFinancialFlow(startObj, endObj)
     if (res.success) {
       setData(res)
-      if (res.banks.length > 0) {
+      if ((res as any).banks.length > 0) {
         if (!txForm.bankId) {
-          setTxForm(prev => ({ ...prev, bankId: res.banks[0].id }))
+          setTxForm(prev => ({ ...prev, bankId: (res as any).banks[0].id }))
         }
-        setImportBankId(prev => prev || res.banks[0].id)
+        setImportBankId(prev => prev || (res as any).banks[0].id)
       }
     }
     
-    // Carregar a projeção de fluxo de caixa futuro
     setForecastLoading(true)
     const forecastRes = await getCashFlowForecast()
     if (forecastRes.success) {
-      setForecastData(forecastRes.projection)
-      setForecastBase(forecastRes.baseBalance)
+      setForecastData((forecastRes as any).projection)
+      setForecastBase((forecastRes as any).baseBalance)
     }
     setForecastLoading(false)
     setLoading(false)
@@ -223,9 +233,13 @@ export default function FinanceiroPage() {
 
         {/* Lado Direito: Fluxo de Caixa Realizado ou Projetado */}
         <div className={styles.column}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '2px solid var(--border-gold)', paddingBottom: '0.6rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.6rem', flexWrap: 'wrap', gap: '0.8rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {financeTab === 'realized' ? '📊 Histórico Realizado (Últimas 50)' : '🔮 Projeção de Fluxo de Caixa (12 Meses)'}
+              {financeTab === 'realized'
+                ? (startDate && endDate
+                    ? `📊 Transações: ${startDate.split('-').reverse().join('/')} → ${endDate.split('-').reverse().join('/')}`
+                    : '📊 Histórico Realizado (Últimas 50)')
+                : '🔮 Projeção de Fluxo de Caixa (12 Meses)'}
             </h2>
             <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(212,175,55,0.03)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--border-gold)' }}>
               <button 
@@ -264,7 +278,95 @@ export default function FinanceiroPage() {
           </div>
 
           {financeTab === 'realized' ? (
-            <div className={styles.tableWrapper}>
+            <div>
+              {/* ── Date Range Filter ── */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: '0.75rem',
+                flexWrap: 'wrap',
+                padding: '1rem 1.25rem',
+                background: 'var(--gold-50)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                marginBottom: '1.25rem'
+              }}>
+                {/* Date Início */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>Data Início</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    max={endDate || todayStr}
+                    onChange={(e) => { setStartDate(e.target.value); if (!endDate) setEndDate(todayStr) }}
+                    style={{ padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: '#fff', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                  />
+                </div>
+
+                <span style={{ color: 'var(--text-muted)', fontSize: '1rem', paddingBottom: '0.5rem' }}>→</span>
+
+                {/* Date Fim */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>Data Fim</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate}
+                    max={todayStr}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    style={{ padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: '#fff', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                  />
+                </div>
+
+                {/* Presets */}
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', paddingBottom: '0.1rem' }}>
+                  {[
+                    { label: 'Hoje',     fn: () => { setStartDate(todayStr); setEndDate(todayStr) } },
+                    { label: '7 dias',   fn: () => { const d = new Date(today); d.setDate(d.getDate()-6); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
+                    { label: '30 dias',  fn: () => { const d = new Date(today); d.setDate(d.getDate()-29); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
+                    { label: 'Este mês', fn: () => { const d = new Date(today.getFullYear(), today.getMonth(), 1); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
+                    { label: 'Tudo',     fn: () => { setStartDate(''); setEndDate('') } },
+                  ].map(({ label, fn }) => (
+                    <button
+                      key={label}
+                      onClick={fn}
+                      style={{
+                        padding: '0.45rem 0.85rem',
+                        background: (
+                          (label === 'Tudo' && !startDate && !endDate) ||
+                          (label === 'Hoje' && startDate === todayStr && endDate === todayStr)
+                        ) ? 'var(--gold-gradient)' : 'rgba(255,255,255,0.85)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-xs)',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: (
+                          (label === 'Tudo' && !startDate && !endDate) ||
+                          (label === 'Hoje' && startDate === todayStr && endDate === todayStr)
+                        ) ? '#fff' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.2s ease',
+                        textShadow: 'none',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Counter */}
+                {(startDate || endDate) && (
+                  <div style={{ marginLeft: 'auto', fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem', paddingBottom: '0.2rem' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1.1rem', background: 'var(--gold-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                      {transactions.length}
+                    </span>
+                    {transactions.length === 1 ? 'transação encontrada' : 'transações encontradas'}
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -300,6 +402,7 @@ export default function FinanceiroPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           ) : (
             <div className={styles.tableWrapper}>

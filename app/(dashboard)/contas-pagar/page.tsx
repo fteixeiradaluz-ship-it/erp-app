@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import styles from './contas.module.css'
-import { getPendingPayables, createPayableInstallments, payTransaction } from '@/app/actions/financialActions'
+import { getPendingPayables, createPayableInstallments, payTransaction, deleteTransaction } from '@/app/actions/financialActions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -12,9 +12,25 @@ export default function ContasAPagarPage() {
   const [data, setData] = useState<any[]>([])
   const [banks, setBanks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overdue' | 'upcoming' | 'future'>('upcoming')
+  const [activeTab, setActiveTab] = useState<'overdue' | 'upcoming' | 'future' | 'periodo'>('upcoming')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPayable, setEditingPayable] = useState<any>(null)
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [justification, setJustification] = useState('')
+
+  // Filtro de período por padrão com os limites do mês corrente
+  const getFirstDayOfMonth = () => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  }
+  const getLastDayOfMonth = () => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  }
+
+  const [filterStartDate, setFilterStartDate] = useState(getFirstDayOfMonth())
+  const [filterEndDate, setFilterEndDate] = useState(getLastDayOfMonth())
 
   // Form State
   const [form, setForm] = useState({
@@ -76,6 +92,24 @@ export default function ContasAPagarPage() {
     }
   }
 
+  const handleDeleteClick = (t: any) => {
+    setEditingPayable(t)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!justification) return alert('Por favor, insira uma justificativa.')
+    const res = await deleteTransaction(editingPayable.id, justification)
+    if (res.success) {
+      setIsDeleteModalOpen(false)
+      setJustification('')
+      setEditingPayable(null)
+      load()
+    } else {
+      alert(res.error)
+    }
+  }
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   
@@ -87,12 +121,22 @@ export default function ContasAPagarPage() {
     if (!t.dueDate) return false
     const d = new Date(t.dueDate)
     
+    // Zera horas para comparação precisa
+    const dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    const startRange = filterStartDate ? new Date(filterStartDate) : null
+    const endRange = filterEndDate ? new Date(filterEndDate) : null
+    if (startRange) startRange.setHours(0, 0, 0, 0)
+    if (endRange) endRange.setHours(23, 59, 59, 999)
+
     if (activeTab === 'overdue') {
-      return d < today
+      return dDate < today
     } else if (activeTab === 'upcoming') {
-      return d >= today && d <= sevenDaysFromNow
+      return dDate >= today && dDate <= sevenDaysFromNow
+    } else if (activeTab === 'future') {
+      return dDate > sevenDaysFromNow
     } else {
-      return d > sevenDaysFromNow
+      // Período / Contas Mensais
+      return (!startRange || dDate >= startRange) && (!endRange || dDate <= endRange)
     }
   })
 
@@ -134,7 +178,40 @@ export default function ContasAPagarPage() {
         >
           Futuras
         </div>
+        <div 
+          className={`${styles.tab} ${activeTab === 'periodo' ? styles.activeTab : ''}`} 
+          onClick={() => setActiveTab('periodo')}
+        >
+          📅 Contas Mensais (Período)
+        </div>
       </div>
+
+      {activeTab === 'periodo' && (
+        <div className={styles.dateFilterWrapper}>
+          <div className={styles.dateInputGroup}>
+            <label>De:</label>
+            <input 
+              type="date" 
+              className={styles.dateField}
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+            />
+          </div>
+          <div className={styles.dateInputGroup}>
+            <label>Até:</label>
+            <input 
+              type="date" 
+              className={styles.dateField}
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+            />
+          </div>
+          <Button variant="secondary" onClick={() => {
+            setFilterStartDate(getFirstDayOfMonth())
+            setFilterEndDate(getLastDayOfMonth())
+          }}>Este Mês</Button>
+        </div>
+      )}
 
       <div className={styles.tableContainer}>
         <table className={styles.table}>
@@ -176,6 +253,7 @@ export default function ContasAPagarPage() {
                           setIsModalOpen(true)
                         }}>✏️</Button>
                         <Button variant="secondary" onClick={() => handlePay(t.id)}>✅ Pagar</Button>
+                        <Button variant="secondary" onClick={() => handleDeleteClick(t)} style={{ backgroundColor: 'transparent', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }} title="Excluir">🗑️ Excluir</Button>
                       </div>
                     </td>
                   </tr>
@@ -257,7 +335,7 @@ export default function ContasAPagarPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pagar com (Banco Previsto)</label>
                     <select 
-                      style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
+                       style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
                       value={form.bankId}
                       onChange={(e) => setForm({...form, bankId: e.target.value})}
                     >
@@ -270,6 +348,34 @@ export default function ContasAPagarPage() {
                     <Button type="submit">Salvar</Button>
                   </div>
                 </form>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Exclusão */}
+      {isDeleteModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <Card>
+              <div className={styles.modalContent}>
+                <h2 style={{ color: '#f44336' }}>Confirmar Exclusão</h2>
+                <p style={{ color: 'var(--foreground)' }}>Tem certeza que deseja excluir esta conta a pagar? Esta ação não pode ser desfeita.</p>
+                <div style={{ margin: '1rem 0', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--gold-primary)', fontWeight: '600' }}>Justificativa da Exclusão</label>
+                  <textarea 
+                    className={styles.justificationArea}
+                    placeholder="Justifique a exclusão desta conta..."
+                    required
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                  <Button variant="secondary" onClick={() => { setIsDeleteModalOpen(false); setJustification(''); setEditingPayable(null); }}>Cancelar</Button>
+                  <Button style={{ backgroundColor: '#f44336', color: '#fff', border: 'none', borderRadius: '8px', padding: '0.6rem 1.2rem', cursor: 'pointer', fontWeight: '600' }} onClick={handleConfirmDelete}>Confirmar Exclusão</Button>
+                </div>
               </div>
             </Card>
           </div>

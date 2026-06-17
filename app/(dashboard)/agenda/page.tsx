@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { getAppointments, createAppointment, updateAppointmentStatus } from "@/app/actions/appointmentActions";
 import { getCustomers } from "@/app/actions/customerActions";
+import { getMedicalRecords } from "@/app/actions/medicalRecordActions";
 import Link from "next/link";
 
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8:00 to 18:00
@@ -20,6 +21,12 @@ export default function AgendaPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+
+  // History Modal states
+  const [selectedCustomerForHistory, setSelectedCustomerForHistory] = useState<{ id: string; name: string } | null>(null);
+  const [customerHistoryRecords, setCustomerHistoryRecords] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   // Calendar Navigation
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -106,6 +113,19 @@ export default function AgendaPage() {
     } else {
       alert(res.error);
     }
+  };
+
+  const openHistory = async (customerId: string, customerName: string) => {
+    setSelectedCustomerForHistory({ id: customerId, name: customerName });
+    setIsHistoryModalOpen(true);
+    setLoadingHistory(true);
+    const res = await getMedicalRecords(customerId);
+    if (res.success) {
+      setCustomerHistoryRecords(res.records || []);
+    } else {
+      alert(res.error || "Erro ao carregar prontuário.");
+    }
+    setLoadingHistory(false);
   };
 
   const changeDate = (days: number) => {
@@ -313,7 +333,32 @@ export default function AgendaPage() {
                                 )}
                                 {isUpcoming && <span className={styles.pulseAlert}>⏰ EM BREVE</span>}
                               </div>
-                              {appt.isReturn && <span className={styles.returnBadge}>Retorno</span>}
+                              {appt.isReturn && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span className={styles.returnBadge}>Retorno</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => openHistory(appt.customerId, appt.customer?.name)}
+                                    style={{
+                                      background: 'rgba(212, 175, 55, 0.1)',
+                                      color: 'var(--gold-hover)',
+                                      border: '1px solid var(--border-gold)',
+                                      borderRadius: '6px',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 'bold',
+                                      padding: '0.2rem 0.6rem',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.25rem',
+                                      transition: 'all 0.2s',
+                                    }}
+                                    title="Ver prontuário e histórico de consultas anteriores"
+                                  >
+                                    📋 Prontuário Anterior
+                                  </button>
+                                </div>
+                              )}
                             </div>
                             <p>{appt.description || "Sem observações"}</p>
                             
@@ -484,6 +529,158 @@ export default function AgendaPage() {
                     <Button type="submit">{formData.isBlocked ? "Bloquear" : "Confirmar Agendamento"}</Button>
                   </div>
                 </form>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ── History Modal ── */}
+      {isHistoryModalOpen && selectedCustomerForHistory && (
+        <div className={styles.modalOverlay} style={{ background: 'rgba(14, 12, 8, 0.75)', backdropFilter: 'blur(10px)', zIndex: 2500 }}>
+          <div className={styles.modal} style={{ maxWidth: '750px', width: '90%' }}>
+            <Card style={{ padding: '0', overflow: 'hidden' }}>
+              <div style={{
+                background: 'var(--background-card)',
+                borderBottom: '1px solid var(--border-color)',
+                padding: '1.5rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <h2 style={{ color: 'var(--gold-primary)', margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>
+                  📋 Prontuário & Histórico Clínico
+                </h2>
+                <button 
+                  onClick={() => setIsHistoryModalOpen(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1,
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div style={{ padding: '1.5rem', maxHeight: '60vh', overflowY: 'auto' }}>
+                <div style={{
+                  background: 'var(--gold-50)',
+                  border: '1px solid var(--border-hover)',
+                  borderRadius: '12px',
+                  padding: '1rem 1.25rem',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}>
+                  <span style={{ fontSize: '1.2rem' }}>👤</span>
+                  <span style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>
+                    <strong>Paciente:</strong> {selectedCustomerForHistory.name}
+                  </span>
+                </div>
+
+                {loadingHistory ? (
+                  <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-secondary)' }}>
+                    Carregando histórico do prontuário...
+                  </div>
+                ) : customerHistoryRecords.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '3rem 1rem',
+                    color: 'var(--text-muted)',
+                    background: 'var(--surface-hover)',
+                    borderRadius: '12px',
+                    border: '1px dashed var(--border-color)'
+                  }}>
+                    <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.75rem' }}>📭</span>
+                    Nenhum registro clínico anterior foi encontrado para este paciente.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    {customerHistoryRecords.map((record, index) => {
+                      const dateStr = new Date(record.createdAt).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+                      const isLast = index === 0;
+
+                      return (
+                        <div 
+                          key={record.id} 
+                          style={{
+                            border: isLast ? '1px solid var(--border-gold)' : '1px solid var(--border-color)',
+                            background: isLast ? '#fffdf7' : 'var(--background-card)',
+                            borderRadius: '12px',
+                            padding: '1.25rem',
+                            position: 'relative',
+                            boxShadow: 'var(--shadow-sm)',
+                          }}
+                        >
+                          {isLast && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '1rem',
+                              right: '1rem',
+                              background: 'var(--gold-primary)',
+                              color: '#000',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '99px',
+                              textTransform: 'uppercase'
+                            }}>
+                              Última Consulta
+                            </span>
+                          )}
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.75rem' }}>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--gold-primary)', fontWeight: 700 }}>
+                              📅 {dateStr}
+                            </span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              <strong>Tipo:</strong> {record.appointment?.isReturn ? 'Retorno' : 'Consulta Principal'}
+                            </span>
+                          </div>
+
+                          <div 
+                            style={{
+                              background: 'var(--surface-hover)',
+                              borderRadius: '8px',
+                              padding: '1rem',
+                              fontSize: '0.9rem',
+                              lineHeight: '1.6',
+                              color: 'var(--text-primary)',
+                              whiteSpace: 'pre-wrap',
+                              borderLeft: '3px solid var(--gold-primary)',
+                              fontFamily: 'system-ui, -apple-system, sans-serif'
+                            }}
+                          >
+                            {record.content}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div style={{
+                background: 'var(--surface-hover)',
+                borderTop: '1px solid var(--border-color)',
+                padding: '1rem 1.5rem',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}>
+                <Button onClick={() => setIsHistoryModalOpen(false)}>
+                  Fechar Prontuário
+                </Button>
               </div>
             </Card>
           </div>

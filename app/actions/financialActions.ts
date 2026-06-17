@@ -106,16 +106,20 @@ export async function getDashboardStats() {
   }
 }
 
-export async function getFinancialFlow() {
+export async function getFinancialFlow(startDate?: Date, endDate?: Date) {
   const session = await getSession()
   if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
 
   try {
+    const dateFilter = startDate && endDate
+      ? { createdAt: { gte: startDate, lte: endDate } }
+      : {}
+
     const transactions = await prisma.transaction.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...dateFilter },
       include: { bank: true },
       orderBy: { createdAt: 'desc' },
-      take: 50
+      take: startDate && endDate ? undefined : 50 // sem limite quando filtra por período
     })
     
     const banks = await prisma.bank.findMany({
@@ -323,6 +327,29 @@ export async function getPendingPayables() {
     if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
 
     try {
+        // Garantir que as contas de cartões e opções de pagamento solicitadas pelo usuário existem
+        const requiredBanks = [
+            "cartao empresa Nubank",
+            "Cartão Empresa Itaú",
+            "cartão Patricia Pão De Açucar",
+            "Cartão Patricia Rico Investimentos",
+            "Boleto Bancário",
+            "Débito em Conta"
+        ];
+        for (const bankName of requiredBanks) {
+            const exists = await prisma.bank.findFirst({
+                where: { name: bankName }
+            });
+            if (!exists) {
+                await prisma.bank.create({
+                    data: {
+                        name: bankName,
+                        balance: 0
+                    }
+                });
+            }
+        }
+
         const transactions = await prisma.transaction.findMany({
             where: {
                 type: 'EXPENSE',

@@ -4,140 +4,253 @@
   left: 0;
   width: var(--sidebar-w);
   height: 100vh;
-  background: #ffffff;
-  backdrop-filter: blur(16px);
-  border-right: 1px solid var(--border-gold);
+  background: rgba(252, 250, 245, 0.92);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 0;
+  padding: 0;
   z-index: 1000;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 4px 0 32px rgba(28, 22, 10, 0.05);
+  transition: transform 0.4s var(--ease-out);
 }
 
+/* ── Header ─────────────────────────── */
 .sidebarHeader {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2rem;
-  padding: 1rem;
+  padding: 2rem 1.5rem 1.5rem;
   position: relative;
+  border-bottom: 1px solid var(--border-color);
+  gap: 0.25rem;
 }
 
 .closeBtn {
   position: absolute;
   top: 1rem;
-  right: 0.5rem;
+  right: 1rem;
   background: transparent;
   border: none;
-  font-size: 1.5rem;
-  color: #888;
-  cursor: pointer;
+  width: 32px;
+  height: 32px;
   display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background var(--transition), color var(--transition);
+}
+.closeBtn:hover {
+  background: var(--gold-100);
+  color: var(--gold-hover);
 }
 
+/* ── Logo ────────────────────────────── */
 .logoWrapper {
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
 }
-
 .logoImg {
   max-height: 50px;
-  max-width: 80%;
+  max-width: 85%;
   object-fit: contain;
+  filter: drop-shadow(0 3px 10px rgba(197, 168, 92, 0.12));
 }
-
 .companyNameText {
-  font-size: 1.2rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.05rem;
   font-weight: 800;
-  color: var(--gold-primary);
-  letter-spacing: 1.5px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   text-align: center;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
+/* ── Nav ─────────────────────────────── */
 .nav {
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: 0.5rem;
-  padding: 0 1rem;
-  overflow-y: auto;
+  gap: 0.15rem;
+  padding: 1rem 0.875rem;
+  overflow-y: scroll;
+  /* Force scrollbar to always be visible so user knows content is scrollable */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(197, 168, 92, 0.35) transparent;
+  min-height: 0; /* Critical: allows flex child to shrink and scroll */
+}
+.nav::-webkit-scrollbar { width: 5px; }
+.nav::-webkit-scrollbar-track {
+  background: rgba(197, 168, 92, 0.04);
+  border-radius: 99px;
+}
+.nav::-webkit-scrollbar-thumb {
+  background: rgba(197, 168, 92, 0.30);
+  border-radius: 99px;
+  border: 1px solid transparent;
+}
+.nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 168, 92, 0.55);
+}
+
+/* Section labels */
+.navLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 1rem 0.6rem 0.35rem;
+  user-select: none;
 }
 
 .navItem {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.8rem 1rem;
-  border-radius: 8px;
-  color: #555;
+  padding: 0.72rem 0.9rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
   font-weight: 500;
-  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  letter-spacing: -0.008em;
+  transition:
+    background var(--transition),
+    color var(--transition),
+    transform 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navItem:hover {
-  background: rgba(212, 175, 55, 0.1);
-  color: var(--gold-primary);
+  background: var(--gold-50);
+  color: var(--gold-hover);
+  transform: translateX(2px);
 }
 
 .active {
-  background: linear-gradient(90deg, rgba(212, 175, 55, 0.2) 0%, transparent 100%);
-  color: var(--gold-primary);
-  border-left: 3px solid var(--gold-primary);
+  background: linear-gradient(100deg, rgba(197, 168, 92, 0.13) 0%, rgba(197, 168, 92, 0.04) 100%);
+  color: var(--gold-hover);
+  font-weight: 600;
+}
+.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+  background: var(--gold-gradient);
+  border-radius: 0 3px 3px 0;
 }
 
+/* ── Icon ────────────────────────────── */
 .icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  transition: transform 0.25s var(--ease-spring);
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.navItem:hover .icon {
+  transform: scale(1.15);
+}
+.active .icon {
+  filter: drop-shadow(0 1px 4px rgba(197, 168, 92, 0.4));
 }
 
+/* ── Footer ──────────────────────────── */
 .footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(0,0,0,0.05);
+  padding: 1rem 0.875rem 1.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius-sm);
+}
+.userAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gold-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(197, 168, 92, 0.3);
 }
 
 .logoutBtn {
   width: 100%;
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  color: #444;
-  padding: 0.75rem;
-  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.72rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  letter-spacing: -0.005em;
 }
-
 .logoutBtn:hover {
-  background: rgba(255, 50, 50, 0.1);
-  border-color: rgba(255, 50, 50, 0.3);
-  color: #ff4d4d;
+  background: var(--error-bg);
+  border-color: rgba(165, 24, 62, 0.2);
+  color: var(--error);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(165, 24, 62, 0.08);
+}
+.logoutBtn:active {
+  transform: translateY(0);
 }
 
+/* ── Overlay ─────────────────────────── */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(24, 21, 15, 0.45);
+  backdrop-filter: blur(10px) saturate(0.8);
+  -webkit-backdrop-filter: blur(10px) saturate(0.8);
   z-index: 999;
+  animation: fadeIn 0.25s ease forwards;
 }
 
+/* ── Responsive ──────────────────────── */
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
   }
-  
   .sidebar.open {
     transform: translateX(0);
   }
-  
   .closeBtn {
-    display: block;
+    display: flex;
   }
 }

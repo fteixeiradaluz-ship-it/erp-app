@@ -1,64 +1,118 @@
 .button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
+  padding: 0.72rem 1.5rem;
+  border-radius: var(--radius-sm);
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s var(--ease-out);
   border: none;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', sans-serif;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.08);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
+}
+.button:hover::after {
+  opacity: 1;
 }
 
 .button:disabled {
-  opacity: 0.5;
+  opacity: 0.42;
   cursor: not-allowed;
+  pointer-events: none;
+}
+.button:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 2px;
 }
 
+/* ── Variants ────── */
 .primary {
-  background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-hover) 100%);
-  color: #000;
+  background: var(--gold-gradient);
+  color: #fff;
+  box-shadow: 0 3px 14px rgba(197, 168, 92, 0.28);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 }
-
 .primary:hover:not(:disabled) {
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+  box-shadow: var(--shadow-gold);
   transform: translateY(-1px);
+}
+.primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .secondary {
   background: transparent;
   color: var(--gold-primary);
-  border: 1px solid var(--gold-primary);
+  border: 1px solid var(--border-hover);
+  box-shadow: var(--shadow-xs);
 }
-
-.secondary:hover {
-  background: rgba(212, 175, 55, 0.1);
+.secondary:hover:not(:disabled) {
+  background: var(--gold-50);
+  color: var(--gold-hover);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.secondary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .danger {
   background: transparent;
-  color: #ff4d4d;
-  border: 1px solid #ff4d4d;
+  color: var(--error);
+  border: 1px solid rgba(165, 24, 62, 0.22);
+}
+.danger:hover:not(:disabled) {
+  background: var(--error-bg);
+  border-color: rgba(165, 24, 62, 0.35);
+  box-shadow: 0 4px 14px rgba(165, 24, 62, 0.10);
+  transform: translateY(-1px);
+}
+.danger:active:not(:disabled) {
+  transform: translateY(0);
 }
 
-.danger:hover {
-  background: rgba(255, 77, 77, 0.1);
+.ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+.ghost:hover:not(:disabled) {
+  background: var(--gold-50);
+  color: var(--text-primary);
+  border-color: var(--border-color);
 }
 
+/* ── Sizes ───────── */
 .small {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
+  padding: 0.42rem 0.9rem;
+  font-size: 0.82rem;
+  border-radius: var(--radius-xs);
+  gap: 0.35rem;
 }
-
 .medium {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+  padding: 0.72rem 1.5rem;
+  font-size: 0.9rem;
 }
-
 .large {
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
+  padding: 0.9rem 2rem;
+  font-size: 1rem;
+  border-radius: var(--radius-md);
 }
