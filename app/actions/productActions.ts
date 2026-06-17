@@ -113,3 +113,26 @@ export async function getLowStockProducts(threshold = 5) {
     return { error: 'Erro ao buscar produtos com estoque baixo' }
   }
 }
+
+export async function updateProductPrice(id: string, price: number) {
+  const session = await getSession()
+  if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+
+  try {
+    const p = await prisma.product.findUnique({ where: { id } })
+    if (!p) return { error: 'Produto não encontrado' }
+
+    await prisma.product.update({
+      where: { id },
+      data: { price }
+    })
+
+    await createAuditLog(session.userId, 'UPDATE_PRODUCT_PRICE', 'Product', { id, name: p.name, price })
+    revalidatePath('/estoque')
+    revalidatePath('/pos')
+    revalidatePath('/precificacao')
+    return { success: true }
+  } catch (err: any) {
+    return { error: 'Erro ao atualizar preço: ' + err.message }
+  }
+}

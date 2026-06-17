@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import styles from './precificacao.module.css'
 import { getSettings } from '@/app/actions/settingsActions'
+import { getProducts, updateProductPrice } from '@/app/actions/productActions'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -11,6 +12,9 @@ import { formatCurrency } from '@/lib/format'
 export default function PrecificacaoPage() {
   const [settings, setSettings] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState<any[]>([])
+  const [selectedProductId, setSelectedProductId] = useState('')
+  const [updating, setUpdating] = useState(false)
 
   const [formData, setFormData] = useState({
     cost: '0',
@@ -22,20 +26,59 @@ export default function PrecificacaoPage() {
 
   useEffect(() => {
     async function load() {
-      const res = await getSettings()
-      if (res.success) {
-        setSettings(res.settings)
+      const [settingsRes, productsRes] = await Promise.all([getSettings(), getProducts()])
+      if (settingsRes.success) {
+        setSettings(settingsRes.settings)
         setFormData(prev => ({
           ...prev,
-          taxOverride: res.settings.taxPercentage.toString(),
-          fixedOverride: res.settings.fixedExpensesPercentage.toString(),
-          commissionOverride: res.settings.commissionPercentage.toString()
+          taxOverride: settingsRes.settings.taxPercentage.toString(),
+          fixedOverride: settingsRes.settings.fixedExpensesPercentage.toString(),
+          commissionOverride: settingsRes.settings.commissionPercentage.toString()
         }))
+      }
+      if (productsRes.success) {
+        setProducts(productsRes.products)
       }
       setLoading(false)
     }
     load()
   }, [])
+
+  const handleProductChange = (productId: string) => {
+    setSelectedProductId(productId)
+    if (productId) {
+      const prod = products.find(p => p.id === productId)
+      if (prod) {
+        setFormData(prev => ({
+          ...prev,
+          cost: prod.cost.toString()
+        }))
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        cost: '0'
+      }))
+    }
+  }
+
+  const handleApplyPrice = async () => {
+    if (!selectedProductId) return
+    if (sellingPrice <= 0) return alert('Calcule um preço de venda válido primeiro.')
+
+    setUpdating(true)
+    const res = await updateProductPrice(selectedProductId, sellingPrice)
+    if (res.success) {
+      alert('Preço de venda atualizado com sucesso no estoque!')
+      const productsRes = await getProducts()
+      if (productsRes.success) {
+        setProducts(productsRes.products)
+      }
+    } else {
+      alert(res.error || 'Erro ao atualizar preço de venda.')
+    }
+    setUpdating(false)
+  }
 
   const cost = parseFloat(formData.cost) || 0
   const margin = parseFloat(formData.desiredMargin) || 0
@@ -67,6 +110,25 @@ export default function PrecificacaoPage() {
         <div className={styles.column}>
           <Card className={styles.calcCard}>
             <h2 className={styles.sectionTitle}>Dados Base</h2>
+            
+            <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem' }}>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', display: 'block', marginBottom: '0.5rem' }}>
+                Vincular a um Produto Existente (Opcional)
+              </label>
+              <select
+                value={selectedProductId}
+                onChange={e => handleProductChange(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)', outline: 'none' }}
+              >
+                <option value="">-- Modo Simulação (Digitar Manualmente) --</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} (Custo: R$ {p.cost.toFixed(2)} | Preço Atual: R$ {p.price.toFixed(2)})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className={styles.inputsGroup}>
               <Input 
                 label="Custo da Mercadoria (R$)" 
@@ -152,6 +214,16 @@ export default function PrecificacaoPage() {
                 <div className={`${styles.sustainabilityBadge} ${margin >= 15 ? styles.sustainable : styles.notSustainable}`}>
                   {margin >= 15 ? '🚀 Margem de Lucro Sustentável' : '⚠️ Alerta: Margem muito baixa'}
                 </div>
+
+                {selectedProductId && (
+                  <Button 
+                    onClick={handleApplyPrice} 
+                    disabled={updating}
+                    style={{ width: '100%', marginTop: '1.5rem', background: 'var(--gold-primary)', color: '#000' }}
+                  >
+                    {updating ? 'Salvando...' : 'Salvar Preço no Estoque'}
+                  </Button>
+                )}
               </>
             )}
           </Card>
