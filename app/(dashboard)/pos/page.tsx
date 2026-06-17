@@ -38,6 +38,7 @@ function POSPageContent() {
   const [settings, setSettings] = useState<any>(null)
   const [banks, setBanks] = useState<Bank[]>([])
   const [selectedBank, setSelectedBank] = useState<string>('')
+  const [activeCategory, setActiveCategory] = useState<'ALL' | 'SERVICE' | 'PRODUCT'>('ALL')
 
   // Prepayment / Signal state from appointment
   const [depositAmount, setDepositAmount] = useState(0)
@@ -162,14 +163,41 @@ function POSPageContent() {
   // Deduct deposit signals paid
   const total = Math.max(0, netAmount - depositAmount)
 
+  const filteredProducts = products.filter(p => {
+    if (activeCategory === 'ALL') return true
+    return p.type === activeCategory
+  })
+  
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Carregando PDV...</div>
 
   return (
     <div className={styles.container}>
       <div className={styles.productsArea}>
-        <h2 className={styles.areaTitle}>Serviços e Produtos</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <h2 className={styles.areaTitle} style={{ margin: 0 }}>Serviços e Produtos</h2>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => setActiveCategory('ALL')}
+              className={`${styles.categoryFilterBtn} ${activeCategory === 'ALL' ? styles.activeFilter : ''}`}
+            >
+              🌟 Todos
+            </button>
+            <button
+              onClick={() => setActiveCategory('SERVICE')}
+              className={`${styles.categoryFilterBtn} ${activeCategory === 'SERVICE' ? styles.activeFilter : ''}`}
+            >
+              🩺 Serviços
+            </button>
+            <button
+              onClick={() => setActiveCategory('PRODUCT')}
+              className={`${styles.categoryFilterBtn} ${activeCategory === 'PRODUCT' ? styles.activeFilter : ''}`}
+            >
+              📦 Produtos
+            </button>
+          </div>
+        </div>
         <div className={styles.productGrid}>
-          {products.map(p => (
+          {filteredProducts.map(p => (
             <Card key={p.id} className={styles.productCard}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <h3 style={{ margin: 0 }}>{p.name}</h3>
