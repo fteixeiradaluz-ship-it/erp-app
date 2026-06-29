@@ -110,6 +110,9 @@
 .modal {
   width: 100%;
   max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 16px;
   transform: translateY(0);
   animation: modalSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
