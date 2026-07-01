@@ -941,3 +941,136 @@
   border-radius: 4px;
   white-space: nowrap;
 }
+
+/* ── Table Sizing and Dropdown ──── */
+.colName {
+  min-width: 180px;
+}
+
+.colContact {
+  min-width: 160px;
+}
+
+.colTags {
+  min-width: 140px;
+}
+
+.colStatus {
+  min-width: 120px;
+}
+
+.colNotes {
+  min-width: 180px;
+  max-width: 280px;
+}
+
+.colActions {
+  min-width: 140px;
+  text-align: right;
+}
+
+.actionsDropdownContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.btnDots {
+  padding: 0.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+  width: 34px;
+  height: 34px;
+  font-weight: bold;
+}
+
+.btnDots:hover {
+  background: var(--card-bg2);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.dropdownMenu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  animation: fadeInDropdown 0.15s ease-out;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s ease, color 0.2s ease;
+  font-family: inherit;
+}
+
+.dropdownItem:hover {
+  background: var(--card-bg2);
+  color: var(--text-primary);
+}
+
+.dropdownItemConvert {
+  font-weight: 600;
+  color: var(--gold-hover);
+}
+
+.dropdownItemConvert:hover {
+  background: rgba(197, 168, 92, 0.08);
+}
+
+.dropdownItemDelete {
+  color: var(--error);
+}
+
+.dropdownItemDelete:hover {
+  background: rgba(165, 24, 62, 0.08);
+  color: var(--error);
+}
+
+.dropdownDivider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 0.35rem 0;
+  border: none;
+}
+
+.dropdownBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+  background: transparent;
+}
+
+@keyframes fadeInDropdown {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}

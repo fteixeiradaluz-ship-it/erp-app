@@ -81,6 +81,9 @@ export default function LeadsPage() {
   // Filtro de pendências
   const [filterPendingCallbacksOnly, setFilterPendingCallbacksOnly] = useState(false)
 
+  // Dropdown de ações por lead na tabela
+  const [activeDropdownLeadId, setActiveDropdownLeadId] = useState<string | null>(null)
+
   // Estatísticas do painel
   const [stats, setStats] = useState({
     total: 0,
@@ -822,12 +825,12 @@ export default function LeadsPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Lead / Oportunidade</th>
-                      <th>Decorrido / Último Contato</th>
-                      <th>Tags / Interesses</th>
-                      <th>Status</th>
-                      <th>Observações</th>
-                      <th>Ações de Venda & CRM</th>
+                      <th className={styles.colName}>Lead / Oportunidade</th>
+                      <th className={styles.colContact}>Decorrido / Último Contato</th>
+                      <th className={styles.colTags}>Tags / Interesses</th>
+                      <th className={styles.colStatus}>Status</th>
+                      <th className={styles.colNotes}>Observações</th>
+                      <th className={styles.colActions}>Ações de Venda & CRM</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -850,13 +853,13 @@ export default function LeadsPage() {
 
                         return (
                           <tr key={lead.id}>
-                            <td>
+                            <td className={styles.colName}>
                               <div>
                                 <div className={styles.leadName}>{lead.name}</div>
                                 <div className={styles.leadPhone}>{lead.phone}</div>
                               </div>
                             </td>
-                            <td>
+                            <td className={styles.colContact}>
                               <div>
                                 <span className={`${styles.badgeDays} ${isWarning ? styles.badgeDaysWarning : ''}`}>
                                   {getElapsedDaysText(lead.createdAt)}
@@ -877,7 +880,7 @@ export default function LeadsPage() {
                                 )}
                               </div>
                             </td>
-                            <td>
+                            <td className={styles.colTags}>
                               <div className={styles.tagsContainer}>
                                 {lead.tags ? (
                                   lead.tags.split(',').map((tag: string, idx: number) => {
@@ -894,8 +897,8 @@ export default function LeadsPage() {
                                 )}
                               </div>
                             </td>
-                            <td>{getStatusBadge(lead.status)}</td>
-                            <td>
+                            <td className={styles.colStatus}>{getStatusBadge(lead.status)}</td>
+                            <td className={styles.colNotes}>
                               {editingLeadId === lead.id ? (
                                 <div className={styles.noteInputWrapper}>
                                   <input
@@ -938,97 +941,138 @@ export default function LeadsPage() {
                                 </div>
                               )}
                             </td>
-                            <td>
+                            <td className={styles.colActions}>
                               <div className={styles.actionsCell}>
-                                {/* WhatsApp Direct */}
+                                {/* WhatsApp Direct (Primary Action) */}
                                 <button
                                   className={`${styles.btnAction} ${styles.btnWhatsapp}`}
                                   onClick={() => handleWhatsAppSend(lead)}
-                                  title="Enviar mensagem pré-definida"
+                                  title="Enviar WhatsApp"
                                 >
                                   💬 WhatsApp
                                 </button>
 
-                                {/* Registrar Contato Manual */}
-                                <button
-                                  className={`${styles.btnAction} ${styles.btnManualContact}`}
-                                  onClick={() => {
-                                    setManualContactLead(lead)
-                                    setContactSummary('')
-                                    setContactNotes('')
-                                  }}
-                                  title="Registrar contato manual"
-                                >
-                                  📞 Reg. Contato
-                                </button>
-
-                                {/* Agendar Retorno */}
-                                {lead.status !== 'BOUGHT' && (
+                                {/* Dropdown Menu (Secondary Actions) */}
+                                <div className={styles.actionsDropdownContainer}>
                                   <button
-                                    className={`${styles.btnAction} ${styles.btnSchedule}`}
-                                    onClick={() => {
-                                      setSchedulingLead(lead)
-                                      setCallbackDate('')
-                                      setCallbackNotes('')
-                                    }}
-                                    title="Agendar retorno de contato (Possível Conversão)"
+                                    className={styles.btnDots}
+                                    onClick={() => setActiveDropdownLeadId(activeDropdownLeadId === lead.id ? null : lead.id)}
+                                    title="Ações"
                                   >
-                                    🗓️ Agendar Retorno
+                                    ⋮
                                   </button>
-                                )}
 
-                                {/* Comprou -> Abre modal para cadastrar mais dados */}
-                                {lead.status !== 'BOUGHT' && (
-                                  <button
-                                    className={`${styles.btnAction} ${styles.btnConvert}`}
-                                    onClick={() => setConvertingLead(lead)}
-                                  >
-                                    🤝 Comprou
-                                  </button>
-                                )}
+                                  {activeDropdownLeadId === lead.id && (
+                                    <>
+                                      <div className={styles.dropdownBackdrop} onClick={() => setActiveDropdownLeadId(null)} />
+                                      <div className={styles.dropdownMenu}>
+                                        {/* Registrar Contato Manual */}
+                                        <button
+                                          className={styles.dropdownItem}
+                                          onClick={() => {
+                                            setActiveDropdownLeadId(null)
+                                            setManualContactLead(lead)
+                                            setContactSummary('')
+                                            setContactNotes('')
+                                          }}
+                                        >
+                                          📞 Registrar Contato
+                                        </button>
 
-                                {/* Outras Ações */}
-                                {lead.status !== 'NOT_BOUGHT' && lead.status !== 'BOUGHT' && (
-                                  <button
-                                    className={styles.btnAction}
-                                    onClick={() => handleStatusChange(lead.id, 'NOT_BOUGHT')}
-                                  >
-                                    ❌ Não comprou
-                                  </button>
-                                )}
+                                        {/* Agendar Retorno */}
+                                        {lead.status !== 'BOUGHT' && (
+                                          <button
+                                            className={styles.dropdownItem}
+                                            onClick={() => {
+                                              setActiveDropdownLeadId(null)
+                                              setSchedulingLead(lead)
+                                              setCallbackDate('')
+                                              setCallbackNotes('')
+                                            }}
+                                          >
+                                            🗓️ Agendar Retorno
+                                          </button>
+                                        )}
 
-                                {lead.status !== 'ARCHIVED' && (
-                                  <button
-                                    className={styles.btnAction}
-                                    onClick={() => handleStatusChange(lead.id, 'ARCHIVED')}
-                                    title="Arquivar lead"
-                                  >
-                                    📥 Arquivar
-                                  </button>
-                                )}
+                                        {/* Comprou -> Abre modal */}
+                                        {lead.status !== 'BOUGHT' && (
+                                          <button
+                                            className={`${styles.dropdownItem} ${styles.dropdownItemConvert}`}
+                                            onClick={() => {
+                                              setActiveDropdownLeadId(null)
+                                              setConvertingLead(lead)
+                                            }}
+                                          >
+                                            🤝 Comprou (Converter)
+                                          </button>
+                                        )}
 
-                                {/* Botões Utilitários adicionais */}
-                                <button
-                                  className={styles.btnIconAction}
-                                  onClick={() => openEditModal(lead)}
-                                  title="Editar Nome e Telefone"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  className={styles.btnIconAction}
-                                  onClick={() => openHistoryModal(lead)}
-                                  title="Ver Histórico e Linha de Tempo"
-                                >
-                                  📜
-                                </button>
-                                <button
-                                  className={`${styles.btnIconAction} ${styles.btnDelete}`}
-                                  onClick={() => handleDeleteLead(lead.id)}
-                                  title="Excluir Lead permanentemente"
-                                >
-                                  🗑️
-                                </button>
+                                        {/* Não comprou */}
+                                        {lead.status !== 'NOT_BOUGHT' && lead.status !== 'BOUGHT' && (
+                                          <button
+                                            className={styles.dropdownItem}
+                                            onClick={() => {
+                                              setActiveDropdownLeadId(null)
+                                              handleStatusChange(lead.id, 'NOT_BOUGHT')
+                                            }}
+                                          >
+                                            ❌ Não Comprou
+                                          </button>
+                                        )}
+
+                                        {/* Arquivar */}
+                                        {lead.status !== 'ARCHIVED' && (
+                                          <button
+                                            className={styles.dropdownItem}
+                                            onClick={() => {
+                                              setActiveDropdownLeadId(null)
+                                              handleStatusChange(lead.id, 'ARCHIVED')
+                                            }}
+                                          >
+                                            📥 Arquivar Lead
+                                          </button>
+                                        )}
+
+                                        <div className={styles.dropdownDivider} />
+
+                                        {/* Editar Dados */}
+                                        <button
+                                          className={styles.dropdownItem}
+                                          onClick={() => {
+                                            setActiveDropdownLeadId(null)
+                                            openEditModal(lead)
+                                          }}
+                                        >
+                                          ✏️ Editar Dados
+                                        </button>
+
+                                        {/* Histórico */}
+                                        <button
+                                          className={styles.dropdownItem}
+                                          onClick={() => {
+                                            setActiveDropdownLeadId(null)
+                                            openHistoryModal(lead)
+                                          }}
+                                        >
+                                          📜 Ver Histórico
+                                        </button>
+
+                                        <div className={styles.dropdownDivider} />
+
+                                        {/* Excluir */}
+                                        <button
+                                          className={`${styles.dropdownItem} ${styles.dropdownItemDelete}`}
+                                          onClick={() => {
+                                            setActiveDropdownLeadId(null)
+                                            handleDeleteLead(lead.id)
+                                          }}
+                                        >
+                                          🗑️ Excluir Lead
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </td>
                           </tr>
