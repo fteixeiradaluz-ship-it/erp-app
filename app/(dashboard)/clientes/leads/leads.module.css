@@ -80,18 +80,10 @@
   color: var(--text-primary);
 }
 
-/* ── Split Layout: Form & List ──── */
+/* ── Main Layout (Full Width) ──── */
 .mainLayout {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 2rem;
-  align-items: start;
-}
-
-@media (max-width: 1024px) {
-  .mainLayout {
-    grid-template-columns: 1fr;
-  }
+  display: block;
+  width: 100%;
 }
 
 /* ── Form Card ──── */

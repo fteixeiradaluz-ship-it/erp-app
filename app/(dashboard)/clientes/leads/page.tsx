@@ -84,6 +84,9 @@ export default function LeadsPage() {
   // Dropdown de ações por lead na tabela
   const [activeDropdownLeadId, setActiveDropdownLeadId] = useState<string | null>(null)
 
+  // Modal de cadastro de novo lead
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
+
   // Estatísticas do painel
   const [stats, setStats] = useState({
     total: 0,
@@ -160,6 +163,7 @@ export default function LeadsPage() {
       setNewPhone('')
       setNewNotes('')
       setNewTags('')
+      setIsRegisterModalOpen(false)
       loadLeads()
     }
     setSubmitting(false)
@@ -461,9 +465,14 @@ export default function LeadsPage() {
           <h1>🎯 CRM: Gestão de Leads</h1>
           <p className={styles.subtitle}>Cadastre novas oportunidades e faça o acompanhamento de vendas nos prazos certos.</p>
         </div>
-        <Link href="/clientes">
-          <Button variant="secondary">← Voltar para Clientes</Button>
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Button onClick={() => setIsRegisterModalOpen(true)}>
+            ➕ Novo Lead
+          </Button>
+          <Link href="/clientes">
+            <Button variant="secondary">← Voltar para Clientes</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Alerta de Retornos Pendentes */}
@@ -566,62 +575,9 @@ export default function LeadsPage() {
         </button>
       </div>
 
-      {/* Layout Split */}
+      {/* Layout Principal da Listagem (Largura Total) */}
       <div className={styles.mainLayout}>
-        {/* Lançamento / Cadastro Lateral */}
-        <div className={styles.formCard}>
-          <h2>Lançar Novo Lead</h2>
-          <form onSubmit={handleRegister}>
-            <div className={styles.formGroup}>
-              <label htmlFor="lead-name">Nome do Lead</label>
-              <input
-                id="lead-name"
-                type="text"
-                placeholder="Ex: Maria da Silva"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                required
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="lead-phone">Telefone (WhatsApp)</label>
-              <input
-                id="lead-phone"
-                type="tel"
-                placeholder="Ex: 11 99999-9999"
-                value={newPhone}
-                onChange={(e) => setNewPhone(e.target.value)}
-                required
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="lead-tags">Tags / Interesses (Separe por vírgula)</label>
-              <input
-                id="lead-tags"
-                type="text"
-                placeholder="Ex: Botox, Preenchimento, Dúvida"
-                value={newTags}
-                onChange={(e) => setNewTags(e.target.value)}
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="lead-notes">Anotações Iniciais</label>
-              <textarea
-                id="lead-notes"
-                placeholder="Interesse em preenchimento, dúvida sobre parcelamento, etc."
-                rows={3}
-                value={newNotes}
-                onChange={(e) => setNewNotes(e.target.value)}
-              />
-            </div>
-            <button type="submit" className={styles.submitBtn} disabled={submitting}>
-              {submitting ? 'Cadastrando...' : 'Adicionar Lead'}
-            </button>
-          </form>
-        </div>
-
-        {/* Listagem de Leads / Kanban Board */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ width: '100%' }}>
           {/* Controles de Filtros */}
           <div className={styles.controlsRow}>
             <div className={styles.filterGroup}>
@@ -1375,6 +1331,67 @@ export default function LeadsPage() {
                   {submittingSchedule ? 'Agendando...' : 'Confirmar e Agendar'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Modal de Cadastro de Lead */}
+      {isRegisterModalOpen && (
+        <div className={styles.modalOverlay} onClick={() => setIsRegisterModalOpen(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.modalCloseBtn} onClick={() => setIsRegisterModalOpen(false)}>
+              ✕
+            </button>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Cadastrar Novo Lead</h2>
+              <p className={styles.modalDesc}>Adicione uma nova oportunidade de venda no CRM.</p>
+            </div>
+            <form onSubmit={handleRegister}>
+              <div className={styles.formGroup}>
+                <label htmlFor="lead-name">Nome do Lead</label>
+                <input
+                  id="lead-name"
+                  type="text"
+                  placeholder="Ex: Maria da Silva"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="lead-phone">Telefone (WhatsApp)</label>
+                <input
+                  id="lead-phone"
+                  type="tel"
+                  placeholder="Ex: 11 99999-9999"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  required
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="lead-tags">Tags / Interesses (Separe por vírgula)</label>
+                <input
+                  id="lead-tags"
+                  type="text"
+                  placeholder="Ex: Botox, Preenchimento, Dúvida"
+                  value={newTags}
+                  onChange={(e) => setNewTags(e.target.value)}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="lead-notes">Anotações Iniciais</label>
+                <textarea
+                  id="lead-notes"
+                  placeholder="Interesse em preenchimento, dúvida sobre parcelamento, etc."
+                  rows={3}
+                  value={newNotes}
+                  onChange={(e) => setNewNotes(e.target.value)}
+                />
+              </div>
+              <button type="submit" className={styles.submitBtn} disabled={submitting}>
+                {submitting ? 'Cadastrando...' : 'Confirmar Cadastro'}
+              </button>
             </form>
           </div>
         </div>
