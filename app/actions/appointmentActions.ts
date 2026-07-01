@@ -86,6 +86,7 @@ export async function blockSlot(date: Date, description: string) {
   });
 }
 
+
 export async function getAppointments(filters?: { 
   startDate?: Date; 
   endDate?: Date;
@@ -121,8 +122,41 @@ export async function getAppointments(filters?: {
         date: "asc",
       },
     });
+
+    let leadCallbacks: any[] = [];
+    if (where.date) {
+      try {
+        const leads = await prisma.lead.findMany({
+          where: {
+            nextContactDate: where.date,
+            status: 'POSSIBLE_CONVERSION',
+          }
+        });
+
+        leadCallbacks = leads.map(l => ({
+          id: `lead-callback-${l.id}`,
+          date: l.nextContactDate,
+          description: l.notes || 'Sem anotações de retorno',
+          status: 'SCHEDULED',
+          isReturn: true,
+          isBlocked: false,
+          isLeadCallback: true,
+          customerId: l.customerId || '',
+          customer: {
+            name: `🎯 [Lead] ${l.name}`,
+            phone: l.phone
+          }
+        }));
+      } catch (e) {
+        console.error("Error fetching lead callbacks for agenda:", e);
+      }
+    }
+
+    const allEvents = [...appointments, ...leadCallbacks].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
     
-    return { success: true, appointments };
+    return { success: true, appointments: allEvents };
   } catch (error) {
     console.error("Error fetching appointments:", error);
     return { success: false, error: "Falha ao buscar consultas." };
