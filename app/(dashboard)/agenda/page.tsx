@@ -333,7 +333,7 @@ export default function AgendaPage() {
                                 )}
                                 {isUpcoming && <span className={styles.pulseAlert}>⏰ EM BREVE</span>}
                               </div>
-                              {appt.isReturn && !appt.isLeadCallback && (
+                              {appt.isReturn && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                   <span className={styles.returnBadge}>Retorno</span>
                                   <button
@@ -365,38 +365,27 @@ export default function AgendaPage() {
                             <div className={styles.apptActions}>
                               {appt.status === "SCHEDULED" && (
                                 <>
-                                  {appt.isLeadCallback ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                      <span className={styles.leadCallbackBadge}>🎯 Retorno CRM (Lead)</span>
-                                      <Link href="/clientes/leads">
-                                        <Button size="small">Ver no CRM</Button>
-                                      </Link>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <Link href={`/agenda/iniciar/${appt.id}`}>
-                                        <Button size="small">▶ Iniciar</Button>
-                                      </Link>
-                                      <Button size="small" variant="secondary" onClick={() => { 
-                                        setSelectedSlot(hour); 
-                                        setFormData({ 
-                                          customerId: appt.customerId, 
-                                          description: appt.description || '', 
-                                          isReturn: appt.isReturn, 
-                                          isBlocked: false,
-                                          depositAmount: appt.depositAmount || 0,
-                                          depositMethod: appt.depositMethod || "PIX"
-                                        });
-                                        setIsModalOpen(true);
-                                      }}>🔄 Reagendar</Button>
-                                      <Button size="small" variant="danger" onClick={() => {
-                                        updateAppointmentStatus(appt.id, "CANCELLED").then(() => {
-                                          fetchDailyData();
-                                          fetchMonthlyData();
-                                        });
-                                      }}>Cancelar</Button>
-                                    </>
-                                  )}
+                                  <Link href={`/agenda/iniciar/${appt.id}`}>
+                                    <Button size="small">▶ Iniciar</Button>
+                                  </Link>
+                                  <Button size="small" variant="secondary" onClick={() => { 
+                                    setSelectedSlot(hour); 
+                                    setFormData({ 
+                                      customerId: appt.customerId, 
+                                      description: appt.description || '', 
+                                      isReturn: appt.isReturn, 
+                                      isBlocked: false,
+                                      depositAmount: appt.depositAmount || 0,
+                                      depositMethod: appt.depositMethod || "PIX"
+                                    });
+                                    setIsModalOpen(true);
+                                  }}>🔄 Reagendar</Button>
+                                  <Button size="small" variant="danger" onClick={() => {
+                                    updateAppointmentStatus(appt.id, "CANCELLED").then(() => {
+                                      fetchDailyData();
+                                      fetchMonthlyData();
+                                    });
+                                  }}>Cancelar</Button>
                                 </>
                               )}
                               {appt.status === "COMPLETED" && (

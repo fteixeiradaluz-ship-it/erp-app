@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
@@ -42,8 +43,8 @@ model Customer {
   complement      String?   // Complemento
   neighborhood    String?   // Bairro
   city            String?   // Cidade
-  shippingNotes   String?   // Observações para envio
-  generalNotes    String?   // Anotações gerais do prontuário
+  shippingNotes   String?   @db.Text // Observações para envio
+  generalNotes    String?   @db.Text // Anotações gerais do prontuário
   sales           Sale[]
   appointments    Appointment[]
   medicalRecords  MedicalRecord[]
@@ -230,7 +231,7 @@ model MedicalRecord {
   customer        Customer    @relation(fields: [customerId], references: [id])
   appointmentId   String?     @unique
   appointment     Appointment? @relation(fields: [appointmentId], references: [id])
-  content         String
+  content         String      @db.Text
   authorId        String      // User ID who created the record
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -262,7 +263,7 @@ model Lead {
   name            String
   phone           String
   status          String    @default("NEW") // NEW, MESSAGE_SENT, BOUGHT, NOT_BOUGHT, ARCHIVED, RETORNAR_MES_SEGUINTE, POSSIBLE_CONVERSION
-  notes           String?
+  notes           String?   @db.Text
   nextContactDate DateTime?
   lastContactAt   DateTime?
   tags            String    @default("")
@@ -283,7 +284,7 @@ model LeadActivity {
   id        String   @id @default(cuid())
   leadId    String
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  content   String
+  content   String    @db.Text
   type      String   @default("NOTE") // NOTE, STATUS_CHANGE, CONTACT
   createdAt DateTime @default(now())
 
