@@ -23,6 +23,7 @@ model User {
   admissionDate      DateTime?
   position           String?
   permissions        String     @default("")
+  requirePasswordChange Boolean  @default(false)
   commissionPercent  Float?     // Nullable to fallback to global Settings.commissionPercentage if needed
   sales              Sale[]
   transactions       Transaction[]

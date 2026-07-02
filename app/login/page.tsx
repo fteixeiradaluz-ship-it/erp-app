@@ -57,7 +57,9 @@ export default function LoginPage() {
     } else {
       // Usando window.location.href para forçar recarregamento completo da página,
       // garantindo que os cookies sejam registrados imediatamente pelo middleware no Next.js
-      if (result?.role === 'ADMIN') {
+      if (result?.requirePasswordChange) {
+        window.location.href = '/alterar-senha'
+      } else if (result?.role === 'ADMIN') {
         window.location.href = '/dashboard'
       } else {
         window.location.href = '/pos'

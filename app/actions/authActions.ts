@@ -21,7 +21,8 @@ export async function loginAction(email: string, password: string) {
     const session = await encrypt({ 
       userId: user.id, 
       role: user.role,
-      permissions: user.permissions || ''
+      permissions: user.permissions || '',
+      requirePasswordChange: user.requirePasswordChange
     })
     
     // Save cookie
@@ -34,7 +35,11 @@ export async function loginAction(email: string, password: string) {
       maxAge: 60 * 60 * 24 // 1 day
     })
 
-    return { success: true, role: user.role }
+    return { 
+      success: true, 
+      role: user.role, 
+      requirePasswordChange: user.requirePasswordChange 
+    }
   } catch (err: any) {
     return { error: 'Erro ao fazer login' }
   }

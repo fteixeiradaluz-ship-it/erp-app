@@ -24,9 +24,23 @@ export async function proxy(request: NextRequest) {
     try {
       const session = await decrypt(sessionCookie)
       
+      // Check if password change is forced
+      if (session.requirePasswordChange) {
+        if (pathname !== '/alterar-senha') {
+          return NextResponse.redirect(new URL('/alterar-senha', request.url))
+        }
+        return NextResponse.next()
+      } else {
+        if (pathname === '/alterar-senha') {
+          const redirectUrl = session.role === 'ADMIN' ? '/dashboard' : '/pos'
+          return NextResponse.redirect(new URL(redirectUrl, request.url))
+        }
+      }
+
       // Logged in trying to access login
       if (pathname === '/login' || pathname === '/') {
-         return NextResponse.redirect(new URL('/dashboard', request.url))
+         const redirectUrl = session.role === 'ADMIN' ? '/dashboard' : '/pos'
+         return NextResponse.redirect(new URL(redirectUrl, request.url))
       }
 
       // Route to permission token mapping

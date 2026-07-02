@@ -5,6 +5,8 @@ import { getSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
 import { createAuditLog } from '@/lib/audit'
+import { encrypt } from '@/lib/auth'
+import { cookies } from 'next/headers'
 
 export async function getUsers() {
   const session = await getSession()
@@ -67,6 +69,7 @@ export async function upsertUser(data: {
       }
       if (data.password) {
         updateData.password = await bcrypt.hash(data.password, 10)
+        updateData.requirePasswordChange = true
       }
       await prisma.user.update({
         where: { id: data.id },
@@ -87,7 +90,8 @@ export async function upsertUser(data: {
           salary: data.salary,
           admissionDate: data.admissionDate ? new Date(data.admissionDate) : null,
           position: data.position,
-          permissions: data.permissions ?? ''
+          permissions: data.permissions ?? '',
+          requirePasswordChange: true
         }
       })
     }
@@ -122,5 +126,65 @@ export async function deleteUser(id: string) {
     return { success: true }
   } catch (err: any) {
     return { error: 'Erro ao excluir usuário' }
+  }
+}
+
+export async function changePasswordAction(data: {
+  currentPassword?: string;
+  newPassword: string;
+}) {
+  const session = await getSession()
+  if (!session) return { error: 'Não autorizado' }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId }
+    })
+
+    if (!user) return { error: 'Usuário não encontrado' }
+
+    if (data.currentPassword) {
+      const isMatch = await bcrypt.compare(data.currentPassword, user.password)
+      if (!isMatch) return { error: 'Senha atual incorreta' }
+    } else {
+      return { error: 'Senha atual obrigatória para confirmação' }
+    }
+
+    const newPasswordHash = await bcrypt.hash(data.newPassword, 10)
+
+    await prisma.user.update({
+      where: { id: session.userId },
+      data: {
+        password: newPasswordHash,
+        requirePasswordChange: false
+      }
+    })
+
+    await createAuditLog(
+      session.userId, 
+      'CHANGE_OWN_PASSWORD', 
+      'User', 
+      { email: user.email }
+    )
+
+    const newSession = await encrypt({ 
+      userId: session.userId, 
+      role: session.role,
+      permissions: session.permissions || '',
+      requirePasswordChange: false
+    })
+    
+    const cookieStore = await cookies()
+    cookieStore.set('user_session', newSession, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 // 1 day
+    })
+
+    return { success: true }
+  } catch (err: any) {
+    return { error: 'Erro ao alterar a senha' }
   }
 }

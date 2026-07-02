@@ -7,6 +7,7 @@ export interface SessionPayload extends JWTPayload {
   userId: string;
   role: string;
   permissions?: string;
+  requirePasswordChange?: boolean;
 }
 
 export async function encrypt(payload: SessionPayload) {
