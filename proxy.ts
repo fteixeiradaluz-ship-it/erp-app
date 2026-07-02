@@ -1,1 +1,1 @@
-export { middleware, middleware as proxy, config } from './middleware'
+export { middleware } from './middleware'
