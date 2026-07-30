@@ -38,7 +38,7 @@
 /* ── Card ──── */
 .card {
   z-index: 10;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(28px) saturate(1.4);
   -webkit-backdrop-filter: blur(28px) saturate(1.4);
   border: 1px solid var(--border-color);
@@ -85,7 +85,7 @@
   color: var(--text-secondary);
   line-height: 1.45;
   margin: 0;
-  max-width: 320px;
+  max-width: 330px;
 }
 
 /* ── Form ──── */
@@ -117,7 +117,7 @@
   padding: 0.85rem 1.1rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   color: var(--foreground);
   font-size: 0.92rem;
   outline: none;
@@ -165,8 +165,8 @@
 /* ── Requirements list ──── */
 .requirements {
   padding: 0.85rem 1rem;
-  background: rgba(197, 168, 92, 0.04);
-  border: 1px solid rgba(197, 168, 92, 0.12);
+  background: rgba(197, 168, 92, 0.05);
+  border: 1px solid rgba(197, 168, 92, 0.15);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   color: var(--text-secondary);
@@ -193,7 +193,7 @@
   background: var(--gold-gradient);
   color: #fff;
   border: none;
-  padding: 0.92rem;
+  padding: 0.95rem;
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
   font-weight: 700;
@@ -239,27 +239,141 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── Error ──── */
-.error {
-  background: var(--error-bg);
-  color: var(--error);
-  padding: 0.8rem 1rem;
+/* ── Messages & Alerts ──── */
+.errorBadge {
+  background: #fff0f3;
+  color: #c5183e;
+  padding: 0.9rem 1.1rem;
   border-radius: var(--radius-sm);
-  font-size: 0.84rem;
+  font-size: 0.86rem;
   margin-bottom: 1rem;
-  border: 1px solid rgba(165, 24, 62, 0.15);
-  text-align: center;
-  font-weight: 500;
+  border: 1px solid rgba(197, 24, 62, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  animation: shake 0.35s ease-in-out;
 }
 
-.success {
-  background: rgba(40, 167, 69, 0.08);
-  color: #28a745;
-  padding: 0.8rem 1rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.84rem;
-  margin-bottom: 1rem;
-  border: 1px solid rgba(40, 167, 69, 0.15);
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.successCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  background: rgba(40, 167, 69, 0.04);
+  border: 1px solid rgba(40, 167, 69, 0.2);
+  border-radius: var(--radius-lg);
   text-align: center;
-  font-weight: 500;
+}
+.successIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(40, 167, 69, 0.12);
+  color: #28a745;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+.successTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #28a745;
+  margin: 0;
+}
+.successDesc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── Confirmation Modal ──── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 12, 8, 0.65);
+  backdrop-filter: blur(12px) saturate(0.8);
+  -webkit-backdrop-filter: blur(12px) saturate(0.8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+.modal {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  padding: 2.25rem;
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  text-align: center;
+  z-index: 1010;
+}
+.modalHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.modalTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+.modalDesc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.modalCancelBtn {
+  flex: 1;
+  padding: 0.8rem;
+  border: 1px solid var(--border-color);
+  background: #f8f9fa;
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.modalCancelBtn:hover {
+  background: #e9ecef;
+}
+.modalConfirmBtn {
+  flex: 1.2;
+  padding: 0.8rem;
+  border: none;
+  background: var(--gold-gradient);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(197, 168, 92, 0.25);
+  transition: transform 0.2s ease;
+}
+.modalConfirmBtn:hover {
+  transform: translateY(-1px);
 }

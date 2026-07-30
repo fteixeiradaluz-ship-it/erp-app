@@ -134,20 +134,24 @@ export async function changePasswordAction(data: {
   newPassword: string;
 }) {
   const session = await getSession()
-  if (!session) return { error: 'Não autorizado' }
+  if (!session) return { error: 'Sessão expirada. Por favor, faça login novamente.' }
 
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.userId }
     })
 
-    if (!user) return { error: 'Usuário não encontrado' }
+    if (!user) return { error: 'Usuário não encontrado.' }
 
-    if (data.currentPassword) {
+    if (data.currentPassword && data.currentPassword.trim() !== '') {
       const isMatch = await bcrypt.compare(data.currentPassword, user.password)
-      if (!isMatch) return { error: 'Senha atual incorreta' }
-    } else {
-      return { error: 'Senha atual obrigatória para confirmação' }
+      if (!isMatch) return { error: 'Senha atual incorreta. Verifique a senha temporária digitada.' }
+    } else if (!user.requirePasswordChange) {
+      return { error: 'Senha atual é obrigatória para alterar a senha.' }
+    }
+
+    if (!data.newPassword || data.newPassword.length < 6) {
+      return { error: 'A nova senha deve ter no mínimo 6 caracteres.' }
     }
 
     const newPasswordHash = await bcrypt.hash(data.newPassword, 10)
@@ -185,6 +189,7 @@ export async function changePasswordAction(data: {
 
     return { success: true }
   } catch (err: any) {
-    return { error: 'Erro ao alterar a senha' }
+    console.error('changePasswordAction error:', err)
+    return { error: 'Erro ao alterar a senha. Tente novamente.' }
   }
 }

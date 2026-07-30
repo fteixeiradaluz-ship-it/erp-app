@@ -24,3 +24,18 @@ export async function decrypt(input: string): Promise<SessionPayload> {
   })
   return payload as SessionPayload
 }
+
+export function hasPermission(session: SessionPayload, token: string): boolean {
+  if (session.role === 'ADMIN') return true
+
+  let userPermissions = session.permissions || ''
+  if (!userPermissions) {
+    if (session.role === 'SECRETARY') {
+      userPermissions = 'dashboard,pos,agenda,relatorios,clientes'
+    } else {
+      userPermissions = 'dashboard,pos,envios,relatorios,clientes'
+    }
+  }
+
+  return userPermissions.split(',').includes(token)
+}

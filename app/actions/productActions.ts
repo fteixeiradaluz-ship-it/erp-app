@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import { createAuditLog } from '@/lib/audit'
+import { hasPermission } from '@/lib/auth'
 
 export async function getProducts(search?: string) {
   const session = await getSession()
@@ -34,7 +35,7 @@ export async function upsertProduct(data: {
   supplierId?: string
 }) {
   const session = await getSession()
-  if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+  if (!session || !hasPermission(session, 'estoque')) return { error: 'Não autorizado' }
 
   try {
     if (data.id) {
@@ -77,7 +78,7 @@ export async function upsertProduct(data: {
 
 export async function deleteProduct(id: string) {
   const session = await getSession()
-  if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+  if (!session || !hasPermission(session, 'estoque')) return { error: 'Não autorizado' }
 
   try {
     await prisma.product.update({
@@ -116,7 +117,7 @@ export async function getLowStockProducts(threshold = 5) {
 
 export async function updateProductPrice(id: string, price: number) {
   const session = await getSession()
-  if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+  if (!session || !hasPermission(session, 'precificacao')) return { error: 'Não autorizado' }
 
   try {
     const p = await prisma.product.findUnique({ where: { id } })
