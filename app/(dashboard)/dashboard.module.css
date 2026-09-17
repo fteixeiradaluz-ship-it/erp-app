@@ -1,10 +1,14 @@
+/* ═══════════════════════════════════════════════════════════════
+   DERMAE ERP — Dashboard Layout & Global Topbar
+   ═══════════════════════════════════════════════════════════════ */
+
 .layout {
   display: flex;
   min-height: 100vh;
   flex-direction: row;
 }
 
-/* ── Mobile Navbar ──────────────────── */
+/* ── Mobile Navbar ──────────────────────────────────────────── */
 .mobileNavbar {
   display: none;
   position: fixed;
@@ -12,7 +16,7 @@
   left: 0;
   right: 0;
   height: var(--mobile-header-h);
-  background: rgba(252, 250, 245, 0.92);
+  background: rgba(252, 250, 245, 0.94);
   backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
   border-bottom: 1px solid var(--border-color);
@@ -27,13 +31,14 @@
   background: transparent;
   border: 1px solid var(--border-color);
   font-size: 1.1rem;
-  color: var(--gold-primary);
+  color: var(--gold-hover);
   cursor: pointer;
   padding: 0.45rem 0.65rem;
   border-radius: var(--radius-sm);
   transition: all var(--transition);
   line-height: 1;
 }
+
 .menuBtn:hover {
   background: var(--gold-100);
   border-color: var(--border-hover);
@@ -41,8 +46,8 @@
 
 .mobileLogo {
   font-weight: 800;
-  font-size: 1rem;
-  letter-spacing: 0.1em;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   background: var(--gold-gradient);
   -webkit-background-clip: text;
@@ -50,21 +55,122 @@
   background-clip: text;
 }
 
-/* ── Main Content ───────────────────── */
-.mainContent {
+.mobileRoleBadge {
+  font-size: 1.1rem;
+}
+
+/* ── Main Wrapper ───────────────────────────────────────────── */
+.mainWrapper {
   flex: 1;
   margin-left: var(--sidebar-w);
-  padding: 2.5rem 3rem;
   width: calc(100% - var(--sidebar-w));
   transition: margin var(--transition), width var(--transition);
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Global Topbar (Desktop) ────────────────────────────────── */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 3rem;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-xs);
+}
+
+.topbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.greetingText {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.topbarDivider {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.dateText {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--gold-50);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem 0.75rem;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gold-hover);
+  letter-spacing: 0.02em;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 2px rgba(30, 102, 65, 0.2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 102, 65, 0.4); }
+  70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(30, 102, 65, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 102, 65, 0); }
+}
+
+.userRoleChip {
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-xs);
+  color: var(--foreground);
+}
+
+/* ── Main Content Area ──────────────────────────────────────── */
+.mainContent {
+  flex: 1;
+  padding: 2.25rem 3rem 3rem;
   animation: fadeInUp 0.3s var(--ease-out) both;
 }
 
-/* ── Responsive ─────────────────────── */
+/* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1024px) {
+  .topbar {
+    padding: 0.75rem 2rem;
+  }
+
   .mainContent {
-    padding: 2rem 2rem;
+    padding: 1.75rem 2rem 2.5rem;
   }
 }
 
@@ -72,13 +178,22 @@
   .layout {
     flex-direction: column;
   }
+  
   .mobileNavbar {
     display: flex;
   }
-  .mainContent {
+  
+  .topbar {
+    display: none;
+  }
+
+  .mainWrapper {
     margin-left: 0;
     margin-top: var(--mobile-header-h);
     width: 100%;
-    padding: 1.5rem 1.25rem;
+  }
+
+  .mainContent {
+    padding: 1.5rem 1.25rem 2rem;
   }
 }
