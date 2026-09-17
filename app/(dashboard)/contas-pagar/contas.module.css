@@ -1,244 +1,517 @@
+/* ═══════════════════════════════════════════════════════════════
+   DERMAE ERP — Módulo de Contas a Pagar (Design System)
+   ═══════════════════════════════════════════════════════════════ */
+
 .container {
   display: flex;
   flex-direction: column;
-  gap: 2.25rem;
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  gap: 1.5rem;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
+/* ── Header ─────────────────────────────────────────────────── */
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.header h1 {
-  font-family: 'Outfit', sans-serif;
-  font-size: 2.25rem;
-  color: var(--gold-primary);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  background: var(--gold-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.5rem;
-  border-bottom: 1px solid var(--border-gold);
-  padding-bottom: 0px;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-/* Elegant custom scrollbar for horizontal tabs on mobile */
-.tabs::-webkit-scrollbar {
-  height: 4px;
-}
-.tabs::-webkit-scrollbar-thumb {
-  background: rgba(197, 168, 92, 0.15);
-  border-radius: 99px;
-}
-
-.tab {
-  padding: 0.8rem 1.4rem;
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-family: 'Outfit', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  border-radius: 10px 10px 0 0;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border-bottom: 3px solid transparent;
-}
-
-.tab:hover {
-  background-color: var(--surface-hover);
-  color: var(--gold-primary);
-}
-
-.activeTab {
-  color: var(--gold-hover);
-  border-bottom: 3px solid var(--gold-primary);
-  background: linear-gradient(180deg, transparent 50%, rgba(197, 168, 92, 0.06) 100%);
-}
-
-.tableContainer {
-  background: var(--card-bg);
-  border-radius: var(--radius-md, 14px);
-  box-shadow: var(--shadow-md);
-  overflow-x: auto;
-  border: 1px solid var(--border-gold);
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 850px;
-}
-
-.table th,
-.table td {
-  padding: 1.1rem 1.5rem;
-  text-align: left;
-}
-
-.table th {
-  background-color: rgba(197, 168, 92, 0.04);
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  color: var(--gold-primary);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 2px solid var(--border-gold);
-}
-
-.table td {
-  border-bottom: 1px solid rgba(197, 168, 92, 0.08);
-  color: var(--foreground);
-  font-size: 0.95rem;
-  transition: background-color 0.2s ease;
-}
-
-.table tr {
-  transition: background-color 0.2s ease;
-}
-
-.table tr:hover td {
-  background-color: var(--surface-hover);
-}
-
-.statusOverdue {
-  color: var(--error);
-  font-weight: 700;
-}
-
-.statusWarning {
-  color: var(--warning);
-  font-weight: 700;
-}
-
-/* Luxury Modal overlays */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(28, 25, 21, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-  padding: 1.5rem;
-}
-
-.modal {
-  width: 100%;
-  max-width: 520px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-gold);
-  border-radius: var(--radius-md, 14px);
-  box-shadow: var(--shadow-lg);
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  overflow: hidden;
-}
-
-.modalContent {
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.modalContent h2 {
-  font-family: 'Outfit', sans-serif;
-  color: var(--gold-primary);
+.headerTitle {
   font-size: 1.6rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.01em;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.98) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-/* Exclusão & Justificativa Textarea */
-.justificationArea {
-  width: 100%;
-  min-height: 90px;
-  padding: 0.85rem 1.1rem;
-  border-radius: 10px;
-  border: 1px solid var(--border-gold);
-  background: #ffffff;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--foreground);
-  font-family: inherit;
-  font-size: 0.95rem;
-  margin-top: 0.5rem;
-  resize: vertical;
-  outline: none;
-  transition: all 0.3s ease;
-}
-
-.justificationArea:focus {
-  border-color: var(--gold-primary);
-  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15) !important;
-}
-
-/* Custom Period Calendar Filters styling */
-.dateFilterWrapper {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
-  margin: 0.5rem 0 1.5rem 0;
-  flex-wrap: wrap;
-  background: rgba(197, 168, 92, 0.04);
-  padding: 1.25rem 1.5rem;
-  border-radius: var(--radius-md, 14px);
-  border: 1px solid rgba(197, 168, 92, 0.16);
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.dateInputGroup {
   display: flex;
   align-items: center;
   gap: 0.6rem;
 }
 
-.dateInputGroup label {
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
+.headerTitle span {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.headerSubtitle {
+  font-size: 0.88rem;
   color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+/* ── Executive KPI Summary Grid ─────────────────────────────── */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.kpiCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.15rem 1.25rem;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: all var(--transition);
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-hover);
+}
+
+.kpiCardOverdue {
+  border-color: rgba(165, 24, 62, 0.25);
+  background: linear-gradient(135deg, rgba(165, 24, 62, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+}
+
+.kpiCardUpcoming {
+  border-color: rgba(176, 92, 0, 0.25);
+  background: linear-gradient(135deg, rgba(176, 92, 0, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+}
+
+.kpiHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpiTitle {
+  font-size: 0.76rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.kpiIcon {
+  font-size: 1.1rem;
+}
+
+.kpiValue {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+.kpiSub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.valOverdue {
+  color: var(--error) !important;
+}
+
+.valUpcoming {
+  color: var(--warning) !important;
+}
+
+.valMonth {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Control Bar: Tabs + Search + Period Filter ─────────────── */
+.controlCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.tabsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+  background: var(--background);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tab:hover {
+  border-color: var(--gold-primary);
+  color: var(--gold-hover);
+}
+
+.activeTab {
+  background: var(--gold-gradient) !important;
+  color: var(--text-on-gold) !important;
+  border-color: transparent !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(197, 168, 92, 0.35);
+}
+
+.tabBadgeOverdue {
+  background: var(--error);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 99px;
+}
+
+.tabBadgeUpcoming {
+  background: var(--warning);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 99px;
+}
+
+.searchBox {
+  position: relative;
+  min-width: 240px;
+  flex: 1;
+  max-width: 380px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.55rem 0.85rem 0.55rem 2.3rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.86rem;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.searchInput:focus {
+  border-color: var(--gold-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15);
+}
+
+/* Date Range Filter Box */
+.dateFilterWrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1rem;
+  background: var(--gold-50);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.dateInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dateLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
 .dateField {
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-gold);
-  background: #ffffff;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+  background: #fff;
   color: var(--foreground);
+  font-size: 0.85rem;
   font-family: inherit;
-  font-size: 0.9rem;
   outline: none;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .dateField:focus {
   border-color: var(--gold-primary);
-  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15) !important;
 }
 
+/* ── Table & Listing ────────────────────────────────────────── */
+.tableContainer {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-xs);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 750px;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.85rem 1rem;
+  background: rgba(197, 168, 92, 0.05);
+  color: var(--gold-hover);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.88rem;
+  color: var(--foreground);
+}
+
+.table tr:hover {
+  background: var(--gold-50);
+}
+
+/* Urgency Badges on Due Date */
+.badgeOverdue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--error-bg);
+  color: var(--error);
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
+  font-size: 0.82rem;
+  border: 1px solid rgba(165, 24, 62, 0.25);
+}
+
+.badgeUpcoming {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--warning-bg);
+  color: var(--warning);
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
+  font-size: 0.82rem;
+  border: 1px solid rgba(176, 92, 0, 0.25);
+}
+
+.badgeFuture {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.amountCell {
+  font-weight: 800;
+  color: var(--gold-hover);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.actionsCell {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.payBtn {
+  background: var(--success);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-xs);
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all var(--transition);
+}
+
+.payBtn:hover {
+  background: #155734;
+  transform: translateY(-1px);
+}
+
+.actionBtn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-xs);
+  transition: all var(--transition);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.actionBtn:hover {
+  background: var(--gold-100);
+  border-color: var(--gold-primary);
+  color: var(--gold-hover);
+}
+
+.deleteBtn:hover {
+  background: var(--error-bg);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* ── Modais ─────────────────────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+
+.modal {
+  width: 100%;
+  max-width: 560px;
+  animation: scaleUp 0.2s ease-out;
+}
+
+.modalContent {
+  background: var(--card-bg);
+  padding: 1.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.modalLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.select {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.9rem;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.select:focus {
+  border-color: var(--gold-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15);
+}
+
+.recurringBox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--gold-50);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.justificationArea {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--background);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.justificationArea:focus {
+  border-color: var(--gold-primary);
+  background: #fff;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabsRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchBox {
+    max-width: 100%;
+  }
+
+  .headerTitle {
+    font-size: 1.3rem;
+  }
+}
