@@ -214,6 +214,7 @@ export default function AgendaPage() {
     deposits: appointments.reduce((sum, a) => sum + (Number(a.depositAmount) || 0), 0)
   };
 
+  const calendarCells = getCalendarCells();
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'SCHEDULED' | 'COMPLETED' | 'BLOCKED'>('ALL');
 
   return (
