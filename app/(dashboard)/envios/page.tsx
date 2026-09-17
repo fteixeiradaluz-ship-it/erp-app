@@ -87,15 +87,97 @@ export default function EnviosPage() {
   }
   const isSameRange = startDate === endDate
 
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const kpis = {
+    total: sales.length,
+    pending: sales.filter(s => s.shippingStatus !== 'SENT').length,
+    sent: sales.filter(s => s.shippingStatus === 'SENT').length,
+    totalRevenue: sales.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0)
+  }
+
+  const filteredSales = sales.filter(s => {
+    if (searchTerm.trim() === '') return true
+    const term = searchTerm.toLowerCase()
+    const customerMatch = s.customer?.name?.toLowerCase().includes(term)
+    const idMatch = s.id?.toLowerCase().includes(term)
+    const cityMatch = s.customer?.city?.toLowerCase().includes(term)
+    return customerMatch || idMatch || cityMatch
+  })
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.titleArea}>
-          <h1>📦 Gestão de Envios</h1>
-          <p>Controle de Notas Fiscais, Etiquetas e Despacho</p>
+          <h1>📦 Gestão de Envios & Logística</h1>
+          <p>Controle de Notas Fiscais, Etiquetas e Despacho de Mercadorias</p>
         </div>
         <Button onClick={() => setIsReportModalOpen(true)}>📊 Gerar Relatório de Envios</Button>
       </header>
+
+      {/* ── Shipping KPIs ── */}
+      <div className={styles.kpiGrid}>
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Total de Pedidos</span>
+            <span className={styles.kpiIcon}>📦</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valGold}`}>
+            {kpis.total}
+          </div>
+          <span className={styles.kpiSub}>Vendas no período filtrado</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Pendentes de Despacho</span>
+            <span className={styles.kpiIcon}>⏳</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valPending}`}>
+            {kpis.pending}
+          </div>
+          <span className={styles.kpiSub}>Aguardando envio</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Enviados / Despachados</span>
+            <span className={styles.kpiIcon}>🚚</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valSent}`}>
+            {kpis.sent}
+          </div>
+          <span className={styles.kpiSub}>Comprovante emitido</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Volume Faturado</span>
+            <span className={styles.kpiIcon}>💰</span>
+          </div>
+          <div className={styles.kpiValue}>
+            R$ {kpis.totalRevenue.toFixed(2)}
+          </div>
+          <span className={styles.kpiSub}>Receita das remessas</span>
+        </div>
+      </div>
+
+      {/* ── Search Bar ── */}
+      <div className={styles.searchCard}>
+        <div className={styles.searchBox}>
+          <span className={styles.searchIcon}>🔍</span>
+          <input 
+            type="text"
+            placeholder="Buscar por cliente, cidade ou código da venda..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className={styles.searchInput}
+          />
+        </div>
+        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          Exibindo <strong>{filteredSales.length}</strong> de {sales.length} envios
+        </span>
+      </div>
 
       <div className={styles.layoutGrid}>
         {/* COL 1: Date Range Picker */}

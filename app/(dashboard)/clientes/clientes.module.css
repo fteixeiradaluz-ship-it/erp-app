@@ -38,6 +38,138 @@
   align-items: flex-end;
 }
 
+/* ── KPI Grid ── */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.kpiCard {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--border-gold, #e0d5be);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(196, 163, 90, 0.15);
+}
+
+.kpiHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpiTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpiIcon {
+  font-size: 1.2rem;
+}
+
+.kpiValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary, #1a1a1a);
+  letter-spacing: -0.02em;
+}
+
+.valGold { color: var(--gold-primary, #c4a35a); }
+.valPrimary { color: var(--foreground, #1a1a1a); }
+.valPositive { color: var(--success, #16a34a); }
+
+.kpiSub {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #888);
+}
+
+/* ── Filter Pills ── */
+.filterPillBar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filterPill {
+  padding: 0.45rem 0.9rem;
+  border-radius: 99px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterPill:hover {
+  border-color: var(--gold-primary, #c4a35a);
+  color: var(--gold-primary, #c4a35a);
+}
+
+.activeFilterPill {
+  background: rgba(196, 163, 90, 0.12);
+  border-color: var(--gold-primary, #c4a35a);
+  color: var(--gold-primary, #c4a35a);
+  font-weight: 700;
+}
+
+/* ── Table Badges & Quick Action Links ── */
+.waBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  color: #16a34a;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.waBadge:hover {
+  background: #25d366;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.quickActionLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.7rem;
+  background: rgba(196, 163, 90, 0.1);
+  border: 1px solid var(--border-gold, #e0d5be);
+  color: var(--gold-primary, #c4a35a);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.quickActionLink:hover {
+  background: var(--gold-primary, #c4a35a);
+  color: #fff;
+}
+
 .tableWrapper {
   overflow-x: auto;
   border-radius: 12px;

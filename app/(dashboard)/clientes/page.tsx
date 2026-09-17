@@ -109,11 +109,24 @@ export default function ClientesPage() {
     }
   }
 
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'WITH_SALES' | 'NO_SALES'>('ALL')
+
+  const totalPatients = customers.length
+  const patientsWithSales = customers.filter(c => (c._count?.sales || 0) > 0).length
+  const totalSalesCount = customers.reduce((acc, c) => acc + (c._count?.sales || 0), 0)
+  const conversionRate = totalPatients > 0 ? ((patientsWithSales / totalPatients) * 100).toFixed(0) : '0'
+
+  const filteredCustomers = customers.filter(c => {
+    if (statusFilter === 'WITH_SALES') return (c._count?.sales || 0) > 0
+    if (statusFilter === 'NO_SALES') return (c._count?.sales || 0) === 0
+    return true
+  })
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerTitleArea}>
-          <h1>👥 Gestão de Clientes</h1>
+          <h1>👥 Gestão de Clientes & CRM</h1>
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
             <Link href="/clientes/reposicao" className={styles.crmLink}>
               🔍 CRM: Reposição de Clientes
@@ -136,55 +149,151 @@ export default function ClientesPage() {
         </div>
       </div>
 
+      {/* ── Executive KPI Cards ── */}
+      <div className={styles.kpiGrid}>
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Total de Pacientes</span>
+            <span className={styles.kpiIcon}>👥</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valGold}`}>
+            {totalPatients}
+          </div>
+          <span className={styles.kpiSub}>Cadastrados na clínica</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Pacientes Ativos</span>
+            <span className={styles.kpiIcon}>🛍️</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valPositive}`}>
+            {patientsWithSales}
+          </div>
+          <span className={styles.kpiSub}>Com histórico de compras</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Total de Vendas</span>
+            <span className={styles.kpiIcon}>💳</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valPrimary}`}>
+            {totalSalesCount}
+          </div>
+          <span className={styles.kpiSub}>Pedidos concluídos</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Taxa de Conversão</span>
+            <span className={styles.kpiIcon}>📈</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valGold}`}>
+            {conversionRate}%
+          </div>
+          <span className={styles.kpiSub}>Pacientes fidelizados</span>
+        </div>
+      </div>
+
+      {/* ── Filter Pills ── */}
+      <div className={styles.filterPillBar}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filtrar por:</span>
+        <button
+          type="button"
+          className={`${styles.filterPill} ${statusFilter === 'ALL' ? styles.activeFilterPill : ''}`}
+          onClick={() => setStatusFilter('ALL')}
+        >
+          Todos ({totalPatients})
+        </button>
+        <button
+          type="button"
+          className={`${styles.filterPill} ${statusFilter === 'WITH_SALES' ? styles.activeFilterPill : ''}`}
+          onClick={() => setStatusFilter('WITH_SALES')}
+        >
+          🛍️ Com Compras ({patientsWithSales})
+        </button>
+        <button
+          type="button"
+          className={`${styles.filterPill} ${statusFilter === 'NO_SALES' ? styles.activeFilterPill : ''}`}
+          onClick={() => setStatusFilter('NO_SALES')}
+        >
+          🆕 Sem Compras ({totalPatients - patientsWithSales})
+        </button>
+      </div>
+
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>
             <tr>
               <th>Cliente</th>
-              <th>Contato</th>
+              <th>Contato & WhatsApp</th>
               <th>Localização</th>
               <th>Vendas</th>
               <th>Última Compra</th>
-              <th>Ações</th>
+              <th style={{ textAlign: 'center' }}>Ações Rápidas</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center' }}>Carregando...</td></tr>
-            ) : customers.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center' }}>Nenhum cliente cadastrado.</td></tr>
-            ) : customers.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  <div className={styles.customerInfo}>
-                    <h4>{c.name}</h4>
-                    <span className={styles.subtitle}>{c.cpf || 'Sem CPF'}</span>
-                  </div>
-                </td>
-                <td>
-                  <div className={styles.customerInfo}>
-                    <p>{c.email || 'Sem e-mail'}</p>
-                    <p>{c.phone || 'Sem telefone'}</p>
-                  </div>
-                </td>
-                <td>
-                  <p style={{fontSize: '0.85rem', color: '#666'}}>
-                    {c.city ? `${c.city} - ${c.neighborhood || ''}` : 'Não informado'}
-                  </p>
-                </td>
-                <td>
-                  <span className={styles.statsBadge}>{c._count.sales} vendas</span>
-                </td>
-                <td>
-                  {c.sales[0] ? new Date(c.sales[0].createdAt).toLocaleDateString() : 'Nunca comprou'}
-                </td>
-                <td className={styles.actions}>
-                  <button className={styles.editBtn} title="Ver Detalhes" onClick={() => openDetail(c)}>👁️</button>
-                  <button className={styles.editBtn} title="Editar" onClick={() => openModal(c)}>✏️</button>
-                  <button className={styles.deleteBtn} title="Excluir" onClick={() => handleDelete(c.id)}>🗑️</button>
-                </td>
-              </tr>
-            ))}
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+            ) : filteredCustomers.length === 0 ? (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum cliente encontrado para o filtro.</td></tr>
+            ) : filteredCustomers.map((c) => {
+              const cleanPhone = c.phone ? c.phone.replace(/\D/g, '') : ''
+              const waUrl = cleanPhone 
+                ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(`Olá ${c.name}, tudo bem? Aqui é da Clínica DERMAE!`)}`
+                : null
+
+              return (
+                <tr key={c.id}>
+                  <td>
+                    <div className={styles.customerInfo}>
+                      <h4>{c.name}</h4>
+                      <span className={styles.subtitle}>{c.cpf || 'Sem CPF'}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className={styles.customerInfo}>
+                      <p>{c.email || 'Sem e-mail'}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                        <span>{c.phone || 'Sem telefone'}</span>
+                        {waUrl && (
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.waBadge}
+                            title="Abrir WhatsApp Web"
+                          >
+                            💬 WhatsApp
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <p style={{fontSize: '0.85rem', color: '#666'}}>
+                      {c.city ? `${c.city} - ${c.neighborhood || ''}` : 'Não informado'}
+                    </p>
+                  </td>
+                  <td>
+                    <span className={styles.statsBadge}>{c._count?.sales || 0} vendas</span>
+                  </td>
+                  <td>
+                    {c.sales && c.sales[0] ? new Date(c.sales[0].createdAt).toLocaleDateString() : 'Nunca comprou'}
+                  </td>
+                  <td className={styles.actions} style={{ justifyContent: 'center' }}>
+                    <Link href={`/clientes/${c.id}/prontuario`} className={styles.quickActionLink} title="Prontuário Médico">
+                      🩺 Prontuário
+                    </Link>
+                    <button className={styles.editBtn} title="Ver Detalhes" onClick={() => openDetail(c)}>👁️</button>
+                    <button className={styles.editBtn} title="Editar" onClick={() => openModal(c)}>✏️</button>
+                    <button className={styles.deleteBtn} title="Excluir" onClick={() => handleDelete(c.id)}>🗑️</button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

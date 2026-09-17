@@ -101,17 +101,62 @@ export default function FornecedoresPage() {
 
   if (loading && suppliers.length === 0) return <div style={{ padding: '2rem' }}>Carregando fornecedores...</div>
 
+  const totalSuppliers = suppliers.length
+  const totalProductsLinked = suppliers.reduce((sum, s) => sum + (s._count?.products || 0), 0)
+  const withDirectContact = suppliers.filter(s => !!s.phone || !!s.email).length
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>🏭 Gestão de Fornecedores</h1>
+        <div>
+          <h1>🏭 Gestão de Fornecedores & Suprimentos</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.2rem' }}>
+            Cadastro de parceiros industriais, reposição de estoque e gestão de compras.
+          </p>
+        </div>
         <Button onClick={() => handleOpenModal()}>+ Novo Fornecedor</Button>
       </header>
+
+      {/* ── Executive KPI Cards ── */}
+      <div className={styles.kpiGrid}>
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Fornecedores Ativos</span>
+            <span className={styles.kpiIcon}>🏭</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valGold}`}>
+            {totalSuppliers}
+          </div>
+          <span className={styles.kpiSub}>Parceiros comerciais cadastrados</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Produtos Vinculados</span>
+            <span className={styles.kpiIcon}>📦</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valPrimary}`}>
+            {totalProductsLinked}
+          </div>
+          <span className={styles.kpiSub}>Itens fornecidos em catálogo</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Contato Rápido</span>
+            <span className={styles.kpiIcon}>📞</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valPositive}`}>
+            {withDirectContact}
+          </div>
+          <span className={styles.kpiSub}>Com WhatsApp ou E-mail ativo</span>
+        </div>
+      </div>
 
       <div className={styles.controls}>
         <div className={styles.searchWrapper}>
           <Input 
-            placeholder="Buscar por nome ou CNPJ..." 
+            placeholder="Buscar por nome, razão social ou CNPJ..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -123,31 +168,65 @@ export default function FornecedoresPage() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>CNPJ</th>
-              <th>Contato</th>
+              <th>Razão Social / Nome</th>
+              <th>CNPJ / CPF</th>
+              <th>Contato & WhatsApp</th>
               <th>E-mail</th>
               <th>Produtos Vinc.</th>
-              <th style={{ textAlign: 'right' }}>Ações</th>
+              <th style={{ textAlign: 'center' }}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {suppliers.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center' }}>Nenhum fornecedor encontrado.</td></tr>
-            ) : suppliers.map(s => (
-              <tr key={s.id}>
-                <td style={{ fontWeight: '600' }}>{s.name}</td>
-                <td>{s.cnpj || '---'}</td>
-                <td>{s.phone || '---'}</td>
-                <td>{s.email || '---'}</td>
-                <td>{s._count.products}</td>
-                 <td className={styles.actions}>
-                   <Button variant="secondary" onClick={() => handleOpenRestock(s)}>🛒 Repor</Button>
-                   <Button variant="secondary" onClick={() => handleOpenModal(s)}>Editar</Button>
-                   <Button variant="danger" onClick={() => handleDelete(s.id)}>Excluir</Button>
-                 </td>
-              </tr>
-            ))}
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum fornecedor encontrado.</td></tr>
+            ) : suppliers.map(s => {
+              const cleanPhone = s.phone ? s.phone.replace(/\D/g, '') : ''
+              const waUrl = cleanPhone 
+                ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(`Olá, tudo bem? Aqui é da Clínica DERMAE sobre reposição de pedidos.`)}`
+                : null
+
+              return (
+                <tr key={s.id}>
+                  <td style={{ fontWeight: '600' }}>{s.name}</td>
+                  <td>{s.cnpj || '---'}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>{s.phone || '---'}</span>
+                      {waUrl && (
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.waBadge}
+                          title="Falar no WhatsApp"
+                        >
+                          💬 WhatsApp
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    {s.email ? (
+                      <a href={`mailto:${s.email}`} className={styles.emailLink} title="Enviar e-mail">
+                        ✉️ {s.email}
+                      </a>
+                    ) : (
+                      '---'
+                    )}
+                  </td>
+                  <td>
+                    <span className={styles.prodBadge}>{s._count?.products || 0} itens</span>
+                  </td>
+                  <td className={styles.actions} style={{ justifyContent: 'center' }}>
+                    <Button variant="secondary" onClick={() => handleOpenRestock(s)} title="Verificar Estoque & Repor">
+                      🛒 Repor
+                    </Button>
+                    <button className={styles.editBtn} title="Editar" onClick={() => handleOpenModal(s)}>✏️</button>
+                    <button className={styles.deleteBtn} title="Excluir" onClick={() => handleDelete(s.id)}>🗑️</button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

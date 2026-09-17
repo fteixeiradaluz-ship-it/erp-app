@@ -21,6 +21,7 @@ export default function ComissoesPage() {
   const [submittingBatch, setSubmittingBatch] = useState(false)
 
   // Filter states
+  const [searchTerm, setSearchTerm] = useState('')
   const [sellerFilter, setSellerFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL') // ALL, PAID, PENDING
 
@@ -105,29 +106,36 @@ export default function ComissoesPage() {
   const filteredTransactions = transactions.filter(t => {
     const matchesSeller = sellerFilter ? t.userId === sellerFilter : true
     const matchesStatus = statusFilter === 'ALL' ? true : t.status === statusFilter
-    return matchesSeller && matchesStatus
+    const term = searchTerm.toLowerCase()
+    const matchesSearch = !term ? true : (
+      t.description?.toLowerCase().includes(term) ||
+      t.user?.name?.toLowerCase().includes(term) ||
+      t.sale?.customer?.name?.toLowerCase().includes(term) ||
+      t.sale?.id?.toLowerCase().includes(term)
+    )
+    return matchesSeller && matchesStatus && matchesSearch
   })
 
   // Calculations for Stats Card
   const totalEarned = filteredTransactions.reduce((acc, t) => acc + t.amount, 0)
   const totalPaid = filteredTransactions.filter(t => t.status === 'PAID').reduce((acc, t) => acc + t.amount, 0)
   const totalPending = filteredTransactions.filter(t => t.status === 'PENDING').reduce((acc, t) => acc + t.amount, 0)
+  const pendingCount = filteredTransactions.filter(t => t.status === 'PENDING').length
 
   // Selected Amount Calculation
   const selectedTransactions = transactions.filter(t => selectedIds.includes(t.id))
   const selectedTotalAmount = selectedTransactions.reduce((sum, t) => sum + t.amount, 0)
-  const pendingCount = filteredTransactions.filter(t => t.status === 'PENDING').length
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h1>💼 Portal de Comissões e Repasses</h1>
+          <h1>💼 Portal de Comissões & Repasses</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.2rem' }}>
-            Acompanhe o faturamento, comissões acumuladas e status de repasses profissionais.
+            Acompanhamento de repasses profissionais, controle de liquidações e histórico de pagamentos.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {isAdmin && selectedIds.length > 0 && (
             <Button onClick={() => setIsBatchModalOpen(true)} style={{ background: 'var(--success)' }}>
               ⚡ Liquidar Selecionadas ({selectedIds.length} - {formatCurrency(selectedTotalAmount)})
@@ -146,56 +154,97 @@ export default function ComissoesPage() {
         </div>
       </header>
 
-      {/* Stats Cards */}
+      {/* ── Executive KPI Cards ── */}
       <div className={styles.statsGrid}>
-        <Card className={styles.statsCard}>
-          <span className={styles.statsTitle}>Comissões Acumuladas</span>
-          <span className={styles.statsValue}>{formatCurrency(totalEarned)}</span>
-        </Card>
-        <Card className={styles.statsCard}>
-          <span className={styles.statsTitle} style={{ color: 'var(--success)' }}>Repasses Pagos</span>
-          <span className={styles.statsValue} style={{ color: 'var(--success)' }}>{formatCurrency(totalPaid)}</span>
-        </Card>
-        <Card className={styles.statsCard}>
-          <span className={styles.statsTitle} style={{ color: 'var(--gold-hover)' }}>Repasses Pendentes</span>
-          <span className={styles.statsValue} style={{ color: 'var(--gold-hover)' }}>{formatCurrency(totalPending)}</span>
-        </Card>
-      </div>
-
-      {/* Filters Form */}
-      <Card className={styles.filters}>
-        {isAdmin && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1 }}>
-            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Vendedor</label>
-            <select
-              className={styles.select}
-              value={sellerFilter}
-              onChange={(e) => setSellerFilter(e.target.value)}
-            >
-              <option value="">Todos os profissionais</option>
-              {data?.users?.map((u: any) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-              ))}
-            </select>
+        <div className={styles.statsCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.statsTitle}>Comissões Acumuladas</span>
+            <span className={styles.kpiIcon}>💼</span>
           </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1 }}>
-          <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Status do Repasse</label>
-          <select
-            className={styles.select}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="ALL">Todos os status</option>
-            <option value="PENDING">Pendentes</option>
-            <option value="PAID">Pagos</option>
-          </select>
+          <span className={`${styles.statsValue} ${styles.valGold}`}>{formatCurrency(totalEarned)}</span>
+          <span className={styles.kpiSub}>{filteredTransactions.length} lançamentos filtrados</span>
         </div>
 
-        <Button variant="secondary" onClick={() => { setSellerFilter(''); setStatusFilter('ALL'); setSelectedIds([]); }}>
-          Limpar Filtros
-        </Button>
+        <div className={styles.statsCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.statsTitle} style={{ color: 'var(--success)' }}>Repasses Pagos</span>
+            <span className={styles.kpiIcon}>✅</span>
+          </div>
+          <span className={`${styles.statsValue} ${styles.valPositive}`}>{formatCurrency(totalPaid)}</span>
+          <span className={styles.kpiSub}>Valores quitados</span>
+        </div>
+
+        <div className={styles.statsCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.statsTitle} style={{ color: 'var(--gold-hover)' }}>Repasses Pendentes</span>
+            <span className={styles.kpiIcon}>⏳</span>
+          </div>
+          <span className={`${styles.statsValue} ${styles.valPending}`}>{formatCurrency(totalPending)}</span>
+          <span className={styles.kpiSub}>{pendingCount} repasse(s) a pagar</span>
+        </div>
+      </div>
+
+      {/* ── Search & Filter Bar ── */}
+      <Card className={styles.filters}>
+        <div className={styles.filterRow}>
+          <div className={styles.searchBox}>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>🔍 Buscar Repasse</label>
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder="Buscar por cliente, profissional, venda..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {isAdmin && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: '220px', flex: 1 }}>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Profissional / Vendedor</label>
+              <select
+                className={styles.select}
+                value={sellerFilter}
+                onChange={(e) => setSellerFilter(e.target.value)}
+              >
+                <option value="">Todos os profissionais</option>
+                {data?.users?.map((u: any) => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Status</label>
+            <div className={styles.statusPills}>
+              <button
+                type="button"
+                className={`${styles.pill} ${statusFilter === 'ALL' ? styles.activePill : ''}`}
+                onClick={() => setStatusFilter('ALL')}
+              >
+                Todos
+              </button>
+              <button
+                type="button"
+                className={`${styles.pill} ${statusFilter === 'PENDING' ? styles.activePill : ''}`}
+                onClick={() => setStatusFilter('PENDING')}
+              >
+                ⏳ Pendentes
+              </button>
+              <button
+                type="button"
+                className={`${styles.pill} ${statusFilter === 'PAID' ? styles.activePill : ''}`}
+                onClick={() => setStatusFilter('PAID')}
+              >
+                ✅ Pagos
+              </button>
+            </div>
+          </div>
+
+          <Button variant="secondary" onClick={() => { setSearchTerm(''); setSellerFilter(''); setStatusFilter('ALL'); setSelectedIds([]); }}>
+            Limpar
+          </Button>
+        </div>
       </Card>
 
       {/* Table */}

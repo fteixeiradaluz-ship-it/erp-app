@@ -53,14 +53,127 @@
   background: rgba(212, 175, 55, 0.05);
 }
 
+/* ── KPI Grid ── */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.kpiCard {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--border-gold, #e0d5be);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(196, 163, 90, 0.15);
+}
+
+.kpiHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpiTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpiIcon {
+  font-size: 1.2rem;
+}
+
+.kpiValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary, #1a1a1a);
+  letter-spacing: -0.02em;
+}
+
+.valGold { color: var(--gold-primary, #c4a35a); }
+.valPrimary { color: var(--foreground, #1a1a1a); }
+.valPositive { color: var(--success, #16a34a); }
+.valNegative { color: var(--error, #ef4444); }
+.valCommission { color: #8b5cf6; }
+
+.kpiSub {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #888);
+}
+
+/* ── Filters & Presets ── */
 .filters {
   display: flex;
-  gap: 1.5rem;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 1.25rem;
   padding: 1.5rem;
-  flex-wrap: wrap;
   background: #fff;
   border: 1px solid var(--border-gold);
+}
+
+.filterInputs {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.presetButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.presetLabel {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.presetGroup {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.presetBtn {
+  padding: 0.55rem 0.85rem;
+  background: var(--background, #f9f8f5);
+  border: 1px solid var(--border-gold, #e0d5be);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.presetBtn:hover {
+  background: rgba(196, 163, 90, 0.15);
+  border-color: var(--gold-primary, #c4a35a);
+  color: var(--gold-primary, #c4a35a);
+}
+
+.filterActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  border-top: 1px dashed rgba(196, 163, 90, 0.25);
+  padding-top: 1rem;
 }
 
 .tableWrapper {
@@ -255,4 +368,29 @@
 
 .dreValueNegative {
   color: var(--error, #f44336);
+}
+
+@media print {
+  .header button,
+  .tabs,
+  .filters,
+  .actionBtn,
+  .actionsCell,
+  .exportBtn {
+    display: none !important;
+  }
+
+  .container {
+    gap: 1rem;
+  }
+
+  .tableWrapper {
+    border: none;
+    box-shadow: none;
+  }
+
+  .table th, .table td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
 }

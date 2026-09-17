@@ -206,7 +206,15 @@ export default function AgendaPage() {
            d1.getFullYear() === d2.getFullYear();
   };
 
-  const calendarCells = getCalendarCells();
+  // Daily KPI calculations
+  const dailyKPIs = {
+    total: appointments.filter(a => !a.isBlocked && a.status !== 'CANCELLED').length,
+    scheduled: appointments.filter(a => a.status === 'SCHEDULED' && !a.isBlocked).length,
+    completed: appointments.filter(a => a.status === 'COMPLETED' && !a.isBlocked).length,
+    deposits: appointments.reduce((sum, a) => sum + (Number(a.depositAmount) || 0), 0)
+  };
+
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SCHEDULED' | 'COMPLETED' | 'BLOCKED'>('ALL');
 
   return (
     <div className={styles.container}>
@@ -221,6 +229,53 @@ export default function AgendaPage() {
           <Button variant="secondary" onClick={() => changeDate(1)}>Amanhã ▶</Button>
         </div>
       </header>
+
+      {/* ── Daily KPIs ── */}
+      <div className={styles.kpiGrid}>
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Atendimentos do Dia</span>
+            <span className={styles.kpiIcon}>📅</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valGold}`}>
+            {dailyKPIs.total}
+          </div>
+          <span className={styles.kpiSub}>Agendamentos marcados</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Aguardando / Em Breve</span>
+            <span className={styles.kpiIcon}>⏳</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valPending}`}>
+            {dailyKPIs.scheduled}
+          </div>
+          <span className={styles.kpiSub}>Pacientes a atender</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Concluídos Hoje</span>
+            <span className={styles.kpiIcon}>✅</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valConfirmed}`}>
+            {dailyKPIs.completed}
+          </div>
+          <span className={styles.kpiSub}>Atendimentos finalizados</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Sinais Recebidos</span>
+            <span className={styles.kpiIcon}>💰</span>
+          </div>
+          <div className={styles.kpiValue}>
+            R$ {dailyKPIs.deposits.toFixed(2)}
+          </div>
+          <span className={styles.kpiSub}>Adiantamentos identificados</span>
+        </div>
+      </div>
 
       <div className={styles.layoutGrid}>
         {/* COL 1: Monthly Calendar */}

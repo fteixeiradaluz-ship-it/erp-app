@@ -240,6 +240,86 @@ export default function RelatoriosPage() {
     document.body.removeChild(link)
   }
 
+  // Date Presets
+  const setPeriodPreset = (preset: 'today' | '7days' | 'month' | 'year') => {
+    const now = new Date()
+    const todayStr = now.toISOString().split('T')[0]
+    
+    if (preset === 'today') {
+      setStartDate(todayStr)
+      setEndDate(todayStr)
+    } else if (preset === '7days') {
+      const past = new Date()
+      past.setDate(now.getDate() - 7)
+      setStartDate(past.toISOString().split('T')[0])
+      setEndDate(todayStr)
+    } else if (preset === 'month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      setStartDate(firstDay.toISOString().split('T')[0])
+      setEndDate(lastDay.toISOString().split('T')[0])
+    } else if (preset === 'year') {
+      const firstDay = new Date(now.getFullYear(), 0, 1)
+      const lastDay = new Date(now.getFullYear(), 11, 31)
+      setStartDate(firstDay.toISOString().split('T')[0])
+      setEndDate(lastDay.toISOString().split('T')[0])
+    }
+  }
+
+  // Summary KPIs based on active tab
+  const getTabKPIs = () => {
+    if (activeTab === 'sales') {
+      const activeSales = data.filter(s => (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt)
+      const totalRevenue = activeSales.reduce((acc, s) => acc + (Number(s.totalAmount) || 0), 0)
+      const totalCommission = activeSales.reduce((acc, s) => {
+        const comm = s.user?.commissionPercent !== null && s.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
+        return acc + (Number(s.totalAmount) || 0) * (comm / 100)
+      }, 0)
+      const count = activeSales.length
+      const ticketMedio = count > 0 ? totalRevenue / count : 0
+      return [
+        { label: 'Faturamento Bruto', value: formatCurrency(totalRevenue), sub: `${count} vendas realizadas`, icon: '💰', colorClass: styles.valGold },
+        { label: 'Vendas Ativas', value: count.toString(), sub: 'Volume de pedidos', icon: '🛒', colorClass: styles.valPrimary },
+        { label: 'Ticket Médio', value: formatCurrency(ticketMedio), sub: 'Média por pedido', icon: '📈', colorClass: styles.valPositive },
+        { label: isAdmin ? 'Total de Comissões' : 'Minha Comissão', value: formatCurrency(totalCommission), sub: 'A repassar/receber', icon: '💼', colorClass: styles.valCommission }
+      ]
+    }
+    if (activeTab === 'financial' && dre) {
+      return [
+        { label: 'Receita Bruta', value: formatCurrency(dre.grossRevenue), sub: 'Entradas operacionais', icon: '💵', colorClass: styles.valPositive },
+        { label: 'CMV (Custos)', value: formatCurrency(dre.cmv), sub: 'Custo de mercadorias', icon: '📉', colorClass: styles.valNegative },
+        { label: 'Despesas Fixas', value: formatCurrency(dre.operationalCost), sub: 'Custos e repasses', icon: '💳', colorClass: styles.valNegative },
+        { label: 'Lucro Líquido Real', value: formatCurrency(dre.netProfit), sub: `Margem: ${dre.grossRevenue > 0 ? ((dre.netProfit / dre.grossRevenue) * 100).toFixed(1) : 0}%`, icon: '💎', colorClass: dre.netProfit >= 0 ? styles.valPositive : styles.valNegative }
+      ]
+    }
+    if (activeTab === 'inventory') {
+      const totalItems = data.length
+      const lowStockCount = data.filter(p => p.stock <= 5).length
+      const totalStockVal = data.reduce((acc, p) => acc + ((Number(p.cost) || 0) * (Number(p.stock) || 0)), 0)
+      const totalSellVal = data.reduce((acc, p) => acc + ((Number(p.price) || 0) * (Number(p.stock) || 0)), 0)
+      return [
+        { label: 'Produtos Cadastrados', value: totalItems.toString(), sub: 'Itens em catálogo', icon: '📦', colorClass: styles.valPrimary },
+        { label: 'Valor em Estoque (Custo)', value: formatCurrency(totalStockVal), sub: 'Patrimônio estocado', icon: '🏭', colorClass: styles.valGold },
+        { label: 'Potencial de Venda', value: formatCurrency(totalSellVal), sub: 'Preço de venda', icon: '✨', colorClass: styles.valPositive },
+        { label: 'Estoque Baixo / Crítico', value: lowStockCount.toString(), sub: 'Itens com <= 5 unid.', icon: '⚠️', colorClass: lowStockCount > 0 ? styles.valNegative : styles.valPositive }
+      ]
+    }
+    if (activeTab === 'appointments') {
+      const totalAppts = data.length
+      const completed = data.filter(a => a.status === 'COMPLETED').length
+      const returns = data.filter(a => a.isReturn).length
+      return [
+        { label: 'Total Agendamentos', value: totalAppts.toString(), sub: 'Consultas no período', icon: '📅', colorClass: styles.valPrimary },
+        { label: 'Consultas Concluídas', value: completed.toString(), sub: 'Atendimentos realizados', icon: '✅', colorClass: styles.valPositive },
+        { label: 'Retornos / Revisões', value: returns.toString(), sub: 'Pacientes em retorno', icon: '🔄', colorClass: styles.valGold },
+        { label: 'Taxa de Realização', value: totalAppts > 0 ? `${((completed / totalAppts) * 100).toFixed(0)}%` : '0%', sub: 'Efetividade da agenda', icon: '📊', colorClass: styles.valCommission }
+      ]
+    }
+    return []
+  }
+
+  const kpis = getTabKPIs()
+
   const isAdmin = role === 'ADMIN'
   const isSecretary = role === 'SECRETARY'
   const isSeller = role === 'SELLER'
@@ -247,21 +327,48 @@ export default function RelatoriosPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>📊 Central de Relatórios</h1>
-        {role && (
-          <span style={{
-            fontSize: '0.75rem',
-            padding: '0.3rem 0.8rem',
-            borderRadius: '99px',
-            background: isAdmin ? 'var(--gold-light)' : 'rgba(2, 136, 209, 0.1)',
-            color: isAdmin ? 'var(--gold-primary)' : 'var(--info)',
-            border: `1px solid ${isAdmin ? 'var(--border-gold)' : 'rgba(2, 136, 209, 0.2)'}`,
-            marginLeft: '1rem'
-          }}>
-            {isAdmin ? '🛡️ Visualização: ADMIN (Completa)' : isSecretary ? '📋 Visualização: Secretária' : '👤 Visualização: Minhas vendas'}
-          </span>
-        )}
+        <div>
+          <h1>📊 Central de Relatórios & Inteligência</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.2rem' }}>
+            Visão analítica consolidada de vendas, financeiro, DRE, estoque e atendimentos.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={() => window.print()} title="Imprimir Relatório">
+            🖨️ Imprimir
+          </Button>
+          {role && (
+            <span style={{
+              fontSize: '0.75rem',
+              padding: '0.3rem 0.8rem',
+              borderRadius: '99px',
+              background: isAdmin ? 'var(--gold-light)' : 'rgba(2, 136, 209, 0.1)',
+              color: isAdmin ? 'var(--gold-primary)' : 'var(--info)',
+              border: `1px solid ${isAdmin ? 'var(--border-gold)' : 'rgba(2, 136, 209, 0.2)'}`,
+            }}>
+              {isAdmin ? '🛡️ Visualização: ADMIN (Completa)' : isSecretary ? '📋 Visualização: Secretária' : '👤 Visualização: Minhas vendas'}
+            </span>
+          )}
+        </div>
       </header>
+
+      {/* ── Executive KPI Cards ── */}
+      {kpis.length > 0 && (
+        <div className={styles.kpiGrid}>
+          {kpis.map((kpi, idx) => (
+            <div key={idx} className={styles.kpiCard}>
+              <div className={styles.kpiHeader}>
+                <span className={styles.kpiTitle}>{kpi.label}</span>
+                <span className={styles.kpiIcon}>{kpi.icon}</span>
+              </div>
+              <div className={`${styles.kpiValue} ${kpi.colorClass}`}>
+                {kpi.value}
+              </div>
+              <span className={styles.kpiSub}>{kpi.sub}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className={styles.tabs}>
         <div
@@ -312,82 +419,98 @@ export default function RelatoriosPage() {
             className={`${styles.tab} ${activeTab === 'financial' ? styles.activeTab : ''}`}
             onClick={() => setActiveTab('financial')}
           >
-            💰 Financeiro
+            💰 Financeiro & DRE
           </div>
         )}
       </div>
 
       <Card className={styles.filters}>
-        <Input
-          label="Data Início"
-          type="date"
-          disabled={activeTab === 'inventory'}
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-        />
-        <Input
-          label="Data Fim"
-          type="date"
-          disabled={activeTab === 'inventory'}
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-        />
+        <div className={styles.filterInputs}>
+          <Input
+            label="Data Início"
+            type="date"
+            disabled={activeTab === 'inventory'}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+          <Input
+            label="Data Fim"
+            type="date"
+            disabled={activeTab === 'inventory'}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
 
-        {activeTab === 'sales' && isAdmin && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Filtrar por Vendedor</label>
-            <select
-              style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
-              value={sellerFilter}
-              onChange={(e) => setSellerFilter(e.target.value)}
-            >
-              <option value="">Todos os vendedores</option>
-              {Array.from(new Set(data.map(s => s.user?.name).filter(Boolean))).map((name: any) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <Button variant="secondary" onClick={() => { setStartDate(''); setEndDate(''); setSellerFilter('') }}>
-          Limpar Filtros
-        </Button>
-        <div style={{ position: 'relative' }}>
-          <Button variant="secondary" onClick={() => setShowColumnPicker(!showColumnPicker)}>
-            ⚙️ Colunas
-          </Button>
-          {showColumnPicker && (
-            <div style={{
-              position: 'absolute',
-              top: '110%',
-              right: 0,
-              background: '#fff',
-              border: '1px solid var(--border-gold)',
-              borderRadius: '8px',
-              padding: '1rem',
-              zIndex: 100,
-              boxShadow: 'var(--shadow-md)',
-              minWidth: '200px'
-            }}>
-              <h4 style={{ fontSize: '0.8rem', color: 'var(--gold-primary)', marginBottom: '0.8rem', borderBottom: '1px solid var(--background)', paddingBottom: '0.4rem' }}>
-                Exibir Colunas
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
-                {columnsConfig[activeTab].map(col => (
-                  <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={isColVisible(col.id)} 
-                      onChange={() => toggleColumn(col.id)}
-                    />
-                    {col.label}
-                  </label>
-                ))}
+          {activeTab !== 'inventory' && (
+            <div className={styles.presetButtons}>
+              <span className={styles.presetLabel}>Atalhos:</span>
+              <div className={styles.presetGroup}>
+                <button type="button" className={styles.presetBtn} onClick={() => setPeriodPreset('today')}>Hoje</button>
+                <button type="button" className={styles.presetBtn} onClick={() => setPeriodPreset('7days')}>7 dias</button>
+                <button type="button" className={styles.presetBtn} onClick={() => setPeriodPreset('month')}>Este Mês</button>
+                <button type="button" className={styles.presetBtn} onClick={() => setPeriodPreset('year')}>Este Ano</button>
               </div>
             </div>
           )}
+
+          {activeTab === 'sales' && isAdmin && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Filtrar por Vendedor</label>
+              <select
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background)', color: 'var(--text-primary)' }}
+                value={sellerFilter}
+                onChange={(e) => setSellerFilter(e.target.value)}
+              >
+                <option value="">Todos os vendedores</option>
+                {Array.from(new Set(data.map(s => s.user?.name).filter(Boolean))).map((name: any) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
-        <Button onClick={exportCSV}>📤 Exportar CSV</Button>
+
+        <div className={styles.filterActions}>
+          <Button variant="secondary" onClick={() => { setStartDate(''); setEndDate(''); setSellerFilter('') }}>
+            Limpar Filtros
+          </Button>
+          <div style={{ position: 'relative' }}>
+            <Button variant="secondary" onClick={() => setShowColumnPicker(!showColumnPicker)}>
+              ⚙️ Colunas
+            </Button>
+            {showColumnPicker && (
+              <div style={{
+                position: 'absolute',
+                top: '110%',
+                right: 0,
+                background: '#fff',
+                border: '1px solid var(--border-gold)',
+                borderRadius: '8px',
+                padding: '1rem',
+                zIndex: 100,
+                boxShadow: 'var(--shadow-md)',
+                minWidth: '200px'
+              }}>
+                <h4 style={{ fontSize: '0.8rem', color: 'var(--gold-primary)', marginBottom: '0.8rem', borderBottom: '1px solid var(--background)', paddingBottom: '0.4rem' }}>
+                  Exibir Colunas
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
+                  {columnsConfig[activeTab].map(col => (
+                    <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isColVisible(col.id)} 
+                        onChange={() => toggleColumn(col.id)}
+                      />
+                      {col.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <Button onClick={exportCSV}>📤 Exportar CSV</Button>
+        </div>
       </Card>
 
       {activeTab === 'financial' && dre && (
