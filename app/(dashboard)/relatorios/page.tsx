@@ -12,6 +12,37 @@ import { formatCurrency } from '@/lib/format'
 
 type TabType = 'sales' | 'inventory' | 'financial' | 'appointments' | 'shipping' | 'deleted_sales'
 
+// Safe date/time formatting helpers
+const formatDate = (date: any): string => {
+  if (!date) return '---'
+  try {
+    const d = new Date(date)
+    return isNaN(d.getTime()) ? '---' : d.toLocaleDateString('pt-BR')
+  } catch {
+    return '---'
+  }
+}
+
+const formatTime = (date: any): string => {
+  if (!date) return '---'
+  try {
+    const d = new Date(date)
+    return isNaN(d.getTime()) ? '---' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return '---'
+  }
+}
+
+const formatDateTime = (date: any): string => {
+  if (!date) return '---'
+  try {
+    const d = new Date(date)
+    return isNaN(d.getTime()) ? '---' : d.toLocaleString('pt-BR')
+  } catch {
+    return '---'
+  }
+}
+
 export default function RelatoriosPage() {
   const [role, setRole] = useState<string>('')
   const [activeTab, setActiveTab] = useState<TabType>('sales')
@@ -89,7 +120,7 @@ export default function RelatoriosPage() {
 
   const toggleColumn = (colId: string) => {
     setVisibleColumns(prev => {
-      const current = prev[activeTab]
+      const current = prev[activeTab] || []
       if (current.includes(colId)) {
         return { ...prev, [activeTab]: current.filter(id => id !== colId) }
       } else {
@@ -98,7 +129,9 @@ export default function RelatoriosPage() {
     })
   }
 
-  const isColVisible = (colId: string) => visibleColumns[activeTab]?.includes(colId)
+  const isColVisible = (colId: string) => {
+    return (visibleColumns[activeTab] || []).includes(colId)
+  }
 
   // Deletion state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -114,61 +147,71 @@ export default function RelatoriosPage() {
   async function load() {
     setLoading(true)
 
-    if (activeTab === 'sales' && globalCommission === 0) {
-      const settingsRes = await getSettings()
-      if (settingsRes.success) {
-        setGlobalCommission(settingsRes.settings.commissionPercentage || 0)
+    try {
+      if (activeTab === 'sales' && globalCommission === 0) {
+        const settingsRes = await getSettings()
+        if (settingsRes?.success && settingsRes?.settings) {
+          setGlobalCommission(Number(settingsRes.settings.commissionPercentage) || 0)
+        }
       }
-    }
 
-    let res: any
-    if (activeTab === 'sales' || activeTab === 'deleted_sales') res = await getSalesReport(startDate, endDate)
-    else if (activeTab === 'inventory') res = await getInventoryReport()
-    else if (activeTab === 'financial') res = await getFinancialReport(startDate, endDate)
-    else if (activeTab === 'appointments') res = await getAppointmentsReport(startDate, endDate)
-    else if (activeTab === 'shipping') res = await getShippingReport(startDate, endDate)
+      let res: any = null
+      if (activeTab === 'sales' || activeTab === 'deleted_sales') res = await getSalesReport(startDate, endDate)
+      else if (activeTab === 'inventory') res = await getInventoryReport()
+      else if (activeTab === 'financial') res = await getFinancialReport(startDate, endDate)
+      else if (activeTab === 'appointments') res = await getAppointmentsReport(startDate, endDate)
+      else if (activeTab === 'shipping') res = await getShippingReport(startDate, endDate)
 
-    if (res?.role && role !== res.role) {
-      setRole(res.role)
-    }
-
-    if (res?.success) {
-      if (activeTab === 'sales' || activeTab === 'deleted_sales') setData(res.sales || [])
-      else if (activeTab === 'inventory') setData(res.products || [])
-      else if (activeTab === 'financial') {
-        setData(res.transactions || [])
-        setDre(res.dre || null)
+      if (res?.role && role !== res.role) {
+        setRole(res.role)
       }
-      else if (activeTab === 'appointments') setData(res.appointments || [])
-      else if (activeTab === 'shipping') setData(res.shipments || [])
-    } else {
-      console.error("Load error:", res?.error)
+
+      if (res?.success) {
+        if (activeTab === 'sales' || activeTab === 'deleted_sales') setData(res.sales || [])
+        else if (activeTab === 'inventory') setData(res.products || [])
+        else if (activeTab === 'financial') {
+          setData(res.transactions || [])
+          setDre(res.dre || null)
+        }
+        else if (activeTab === 'appointments') setData(res.appointments || [])
+        else if (activeTab === 'shipping') setData(res.shipments || [])
+      } else {
+        console.error("Load error:", res?.error)
+        setData([])
+      }
+    } catch (err) {
+      console.error("Critical load exception:", err)
       setData([])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleDeleteSale() {
     if (!justification) return alert('Por favor, informe a justificativa.')
     setIsDeleting(true)
-    const res = await deleteSale(selectedSale.id, justification)
-    if (res.success) {
-      alert('Venda excluída com sucesso.')
-      setShowDeleteModal(false)
-      setJustification('')
-      load()
-    } else {
-      alert(res.error || 'Erro ao excluir venda.')
+    try {
+      const res = await deleteSale(selectedSale?.id, justification)
+      if (res?.success) {
+        alert('Venda excluída com sucesso.')
+        setShowDeleteModal(false)
+        setJustification('')
+        load()
+      } else {
+        alert(res?.error || 'Erro ao excluir venda.')
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Erro inesperado ao excluir venda.')
+    } finally {
+      setIsDeleting(false)
     }
-    setIsDeleting(false)
   }
 
   const exportCSV = () => {
     if (!data || data.length === 0) return alert('Sem dados para exportar')
     let csvContent = 'data:text/csv;charset=utf-8,'
 
-    // Header based on visible columns
-    const currentCols = columnsConfig[activeTab]?.filter(col => isColVisible(col.id)) || []
+    const currentCols = (columnsConfig[activeTab] || []).filter(col => isColVisible(col.id))
     csvContent += currentCols.map(c => c.label).join(',') + '\n'
 
     data.forEach((item: any) => {
@@ -177,9 +220,9 @@ export default function RelatoriosPage() {
       
       currentCols.forEach(col => {
         if (activeTab === 'sales' || activeTab === 'deleted_sales') {
-          if (col.id === 'date') rowData.push(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '')
+          if (col.id === 'date') rowData.push(formatDate(item.createdAt))
           else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
-          else if (col.id === 'items') rowData.push(`"${(item.items || []).map((i: any) => `${i.quantity}x ${i.product?.name || 'Item'}`).join(' | ')}"`)
+          else if (col.id === 'items') rowData.push(`"${(item.items || []).map((i: any) => `${i?.quantity || 1}x ${i?.product?.name || 'Item'}`).join(' | ')}"`)
           else if (col.id === 'seller') rowData.push(item.user?.name || '---')
           else if (col.id === 'method') rowData.push(item.paymentMethod || '')
           else if (col.id === 'commission') {
@@ -197,23 +240,22 @@ export default function RelatoriosPage() {
           else if (col.id === 'stock') rowData.push((Number(item.stock) || 0).toString())
         }
         else if (activeTab === 'financial') {
-          if (col.id === 'date') rowData.push(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '')
+          if (col.id === 'date') rowData.push(formatDate(item.createdAt))
           else if (col.id === 'description') rowData.push(`"${item.description || ''}"`)
           else if (col.id === 'bank') rowData.push(item.bank?.name || '---')
           else if (col.id === 'type') rowData.push(item.type || '')
           else if (col.id === 'amount') rowData.push((Number(item.amount) || 0).toString())
         }
         else if (activeTab === 'appointments') {
-          const dt = item.date ? new Date(item.date) : null
-          if (col.id === 'date') rowData.push(dt ? dt.toLocaleDateString() : '')
-          else if (col.id === 'time') rowData.push(dt ? dt.toLocaleTimeString() : '')
+          if (col.id === 'date') rowData.push(formatDate(item.date))
+          else if (col.id === 'time') rowData.push(formatTime(item.date))
           else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
           else if (col.id === 'phone') rowData.push(item.customer?.phone || '---')
           else if (col.id === 'status') rowData.push(item.status || '')
           else if (col.id === 'return') rowData.push(item.isReturn ? 'Sim' : 'Não')
         }
         else if (activeTab === 'shipping') {
-          if (col.id === 'date') rowData.push(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '')
+          if (col.id === 'date') rowData.push(formatDate(item.createdAt))
           else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
           else if (col.id === 'phone') rowData.push(item.customer?.phone || '---')
           else if (col.id === 'seller') rowData.push(item.user?.name || '---')
@@ -258,81 +300,90 @@ export default function RelatoriosPage() {
     }
   }
 
-  // Summary KPIs based on active tab
-  const getTabKPIs = () => {
-    if (!Array.isArray(data)) return []
-
-    if (activeTab === 'sales') {
-      const activeSales = data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt)
-      const totalRevenue = activeSales.reduce((acc, s) => acc + (Number(s?.totalAmount) || 0), 0)
-      const totalCommission = activeSales.reduce((acc, s) => {
-        const comm = s?.user?.commissionPercent !== null && s?.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
-        return acc + (Number(s?.totalAmount) || 0) * (comm / 100)
-      }, 0)
-      const count = activeSales.length
-      const ticketMedio = count > 0 ? totalRevenue / count : 0
-      return [
-        { label: 'Faturamento Bruto', value: formatCurrency(totalRevenue), sub: `${count} vendas realizadas`, icon: '💰', colorClass: styles.valGold },
-        { label: 'Vendas Ativas', value: count.toString(), sub: 'Volume de pedidos', icon: '🛒', colorClass: styles.valPrimary },
-        { label: 'Ticket Médio', value: formatCurrency(ticketMedio), sub: 'Média por pedido', icon: '📈', colorClass: styles.valPositive },
-        { label: isAdmin ? 'Total de Comissões' : 'Minha Comissão', value: formatCurrency(totalCommission), sub: 'A repassar/receber', icon: '💼', colorClass: styles.valCommission }
-      ]
-    }
-    if (activeTab === 'deleted_sales') {
-      const deletedSales = data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !!s.deletedAt)
-      const totalVoided = deletedSales.reduce((acc, s) => acc + (Number(s?.totalAmount) || 0), 0)
-      return [
-        { label: 'Vendas Excluídas', value: deletedSales.length.toString(), sub: 'Cancelamentos/Estornos', icon: '🗑️', colorClass: styles.valNegative },
-        { label: 'Total Estornado', value: formatCurrency(totalVoided), sub: 'Impacto financeiro', icon: '💸', colorClass: styles.valNegative }
-      ]
-    }
-    if (activeTab === 'shipping') {
-      const totalShipments = data.length
-      const withDocs = data.filter(s => s && s.nfGenerated && s.labelGenerated).length
-      return [
-        { label: 'Envios Finalizados', value: totalShipments.toString(), sub: 'Despachos no período', icon: '📦', colorClass: styles.valPrimary },
-        { label: 'Doc. Completa (NF + Etiqueta)', value: withDocs.toString(), sub: 'Etiqueta e NF geradas', icon: '✅', colorClass: styles.valPositive }
-      ]
-    }
-    if (activeTab === 'financial' && dre) {
-      return [
-        { label: 'Receita Bruta', value: formatCurrency(dre.grossRevenue || 0), sub: 'Entradas operacionais', icon: '💵', colorClass: styles.valPositive },
-        { label: 'CMV (Custos)', value: formatCurrency(dre.cmv || 0), sub: 'Custo de mercadorias', icon: '📉', colorClass: styles.valNegative },
-        { label: 'Despesas Fixas', value: formatCurrency(dre.operationalCost || 0), sub: 'Custos e repasses', icon: '💳', colorClass: styles.valNegative },
-        { label: 'Lucro Líquido Real', value: formatCurrency(dre.netProfit || 0), sub: `Margem: ${dre.grossRevenue > 0 ? (((dre.netProfit || 0) / dre.grossRevenue) * 100).toFixed(1) : 0}%`, icon: '💎', colorClass: (dre.netProfit || 0) >= 0 ? styles.valPositive : styles.valNegative }
-      ]
-    }
-    if (activeTab === 'inventory') {
-      const totalItems = data.length
-      const lowStockCount = data.filter(p => p && p.stock <= 5).length
-      const totalStockVal = data.reduce((acc, p) => acc + ((Number(p?.cost) || 0) * (Number(p?.stock) || 0)), 0)
-      const totalSellVal = data.reduce((acc, p) => acc + ((Number(p?.price) || 0) * (Number(p?.stock) || 0)), 0)
-      return [
-        { label: 'Produtos Cadastrados', value: totalItems.toString(), sub: 'Itens em catálogo', icon: '📦', colorClass: styles.valPrimary },
-        { label: 'Valor em Estoque (Custo)', value: formatCurrency(totalStockVal), sub: 'Patrimônio estocado', icon: '🏭', colorClass: styles.valGold },
-        { label: 'Potencial de Venda', value: formatCurrency(totalSellVal), sub: 'Preço de venda', icon: '✨', colorClass: styles.valPositive },
-        { label: 'Estoque Baixo / Crítico', value: lowStockCount.toString(), sub: 'Itens com <= 5 unid.', icon: '⚠️', colorClass: lowStockCount > 0 ? styles.valNegative : styles.valPositive }
-      ]
-    }
-    if (activeTab === 'appointments') {
-      const totalAppts = data.length
-      const completed = data.filter(a => a && a.status === 'COMPLETED').length
-      const returns = data.filter(a => a && a.isReturn).length
-      return [
-        { label: 'Total Agendamentos', value: totalAppts.toString(), sub: 'Consultas no período', icon: '📅', colorClass: styles.valPrimary },
-        { label: 'Consultas Concluídas', value: completed.toString(), sub: 'Atendimentos realizados', icon: '✅', colorClass: styles.valPositive },
-        { label: 'Retornos / Revisões', value: returns.toString(), sub: 'Pacientes em retorno', icon: '🔄', colorClass: styles.valGold },
-        { label: 'Taxa de Realização', value: totalAppts > 0 ? `${((completed / totalAppts) * 100).toFixed(0)}%` : '0%', sub: 'Efetividade da agenda', icon: '📊', colorClass: styles.valCommission }
-      ]
-    }
-    return []
-  }
-
-  const kpis = getTabKPIs()
-
   const isAdmin = role === 'ADMIN'
   const isSecretary = role === 'SECRETARY'
   const isSeller = role === 'SELLER'
+
+  // Summary KPIs based on active tab with absolute try-catch safety
+  const getTabKPIs = () => {
+    try {
+      if (!Array.isArray(data)) return []
+
+      if (activeTab === 'sales') {
+        const activeSales = data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt)
+        const totalRevenue = activeSales.reduce((acc, s) => acc + (Number(s?.totalAmount) || 0), 0)
+        const totalCommission = activeSales.reduce((acc, s) => {
+          const comm = s?.user?.commissionPercent !== null && s?.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
+          return acc + (Number(s?.totalAmount) || 0) * (Number(comm) / 100)
+        }, 0)
+        const count = activeSales.length
+        const ticketMedio = count > 0 ? totalRevenue / count : 0
+        return [
+          { label: 'Faturamento Bruto', value: formatCurrency(totalRevenue), sub: `${count} vendas realizadas`, icon: '💰', colorClass: styles.valGold },
+          { label: 'Vendas Ativas', value: count.toString(), sub: 'Volume de pedidos', icon: '🛒', colorClass: styles.valPrimary },
+          { label: 'Ticket Médio', value: formatCurrency(ticketMedio), sub: 'Média por pedido', icon: '📈', colorClass: styles.valPositive },
+          { label: isAdmin ? 'Total de Comissões' : 'Minha Comissão', value: formatCurrency(totalCommission), sub: 'A repassar/receber', icon: '💼', colorClass: styles.valCommission }
+        ]
+      }
+      if (activeTab === 'deleted_sales') {
+        const deletedSales = data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !!s.deletedAt)
+        const totalVoided = deletedSales.reduce((acc, s) => acc + (Number(s?.totalAmount) || 0), 0)
+        return [
+          { label: 'Vendas Excluídas', value: deletedSales.length.toString(), sub: 'Cancelamentos/Estornos', icon: '🗑️', colorClass: styles.valNegative },
+          { label: 'Total Estornado', value: formatCurrency(totalVoided), sub: 'Impacto financeiro', icon: '💸', colorClass: styles.valNegative }
+        ]
+      }
+      if (activeTab === 'shipping') {
+        const totalShipments = data.length
+        const withDocs = data.filter(s => s && s.nfGenerated && s.labelGenerated).length
+        return [
+          { label: 'Envios Finalizados', value: totalShipments.toString(), sub: 'Despachos no período', icon: '📦', colorClass: styles.valPrimary },
+          { label: 'Doc. Completa (NF + Etiqueta)', value: withDocs.toString(), sub: 'Etiqueta e NF geradas', icon: '✅', colorClass: styles.valPositive }
+        ]
+      }
+      if (activeTab === 'financial' && dre) {
+        const grossRev = Number(dre.grossRevenue) || 0
+        const netProf = Number(dre.netProfit) || 0
+        const marginPct = grossRev > 0 ? ((netProf / grossRev) * 100).toFixed(1) : '0'
+        return [
+          { label: 'Receita Bruta', value: formatCurrency(grossRev), sub: 'Entradas operacionais', icon: '💵', colorClass: styles.valPositive },
+          { label: 'CMV (Custos)', value: formatCurrency(dre.cmv), sub: 'Custo de mercadorias', icon: '📉', colorClass: styles.valNegative },
+          { label: 'Despesas Fixas', value: formatCurrency(dre.operationalCost), sub: 'Custos e repasses', icon: '💳', colorClass: styles.valNegative },
+          { label: 'Lucro Líquido Real', value: formatCurrency(netProf), sub: `Margem: ${marginPct}%`, icon: '💎', colorClass: netProf >= 0 ? styles.valPositive : styles.valNegative }
+        ]
+      }
+      if (activeTab === 'inventory') {
+        const totalItems = data.length
+        const lowStockCount = data.filter(p => p && Number(p.stock) <= 5).length
+        const totalStockVal = data.reduce((acc, p) => acc + ((Number(p?.cost) || 0) * (Number(p?.stock) || 0)), 0)
+        const totalSellVal = data.reduce((acc, p) => acc + ((Number(p?.price) || 0) * (Number(p?.stock) || 0)), 0)
+        return [
+          { label: 'Produtos Cadastrados', value: totalItems.toString(), sub: 'Itens em catálogo', icon: '📦', colorClass: styles.valPrimary },
+          { label: 'Valor em Estoque (Custo)', value: formatCurrency(totalStockVal), sub: 'Patrimônio estocado', icon: '🏭', colorClass: styles.valGold },
+          { label: 'Potencial de Venda', value: formatCurrency(totalSellVal), sub: 'Preço de venda', icon: '✨', colorClass: styles.valPositive },
+          { label: 'Estoque Baixo / Crítico', value: lowStockCount.toString(), sub: 'Itens com <= 5 unid.', icon: '⚠️', colorClass: lowStockCount > 0 ? styles.valNegative : styles.valPositive }
+        ]
+      }
+      if (activeTab === 'appointments') {
+        const totalAppts = data.length
+        const completed = data.filter(a => a && a.status === 'COMPLETED').length
+        const returns = data.filter(a => a && a.isReturn).length
+        return [
+          { label: 'Total Agendamentos', value: totalAppts.toString(), sub: 'Consultas no período', icon: '📅', colorClass: styles.valPrimary },
+          { label: 'Consultas Concluídas', value: completed.toString(), sub: 'Atendimentos realizados', icon: '✅', colorClass: styles.valPositive },
+          { label: 'Retornos / Revisões', value: returns.toString(), sub: 'Pacientes em retorno', icon: '🔄', colorClass: styles.valGold },
+          { label: 'Taxa de Realização', value: totalAppts > 0 ? `${((completed / totalAppts) * 100).toFixed(0)}%` : '0%', sub: 'Efetividade da agenda', icon: '📊', colorClass: styles.valCommission }
+        ]
+      }
+      return []
+    } catch (e) {
+      console.error('getTabKPIs error:', e)
+      return []
+    }
+  }
+
+  const kpis = getTabKPIs()
+  const currentTabColCount = (visibleColumns[activeTab] || []).length || 6
 
   return (
     <div className={styles.container}>
@@ -505,7 +556,7 @@ export default function RelatoriosPage() {
                   Exibir Colunas
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
-                  {columnsConfig[activeTab]?.map(col => (
+                  {(columnsConfig[activeTab] || []).map(col => (
                     <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
                       <input 
                         type="checkbox" 
@@ -529,13 +580,13 @@ export default function RelatoriosPage() {
             <div className={styles.dreTitle}>
               <span>📊 Demonstrativo do Resultado do Exercício (DRE)</span>
               <span style={{ fontSize: '0.8rem', fontWeight: '500', color: 'var(--text-secondary)' }}>
-                Imposto: {dre.taxPercentage}% | Custo Fixo: {dre.fixedExpensesPercentage}%
+                Imposto: {dre.taxPercentage || 0}% | Custo Fixo: {dre.fixedExpensesPercentage || 0}%
               </span>
             </div>
             
             <div className={styles.dreRow}>
               <span>Receita Bruta (Faturamento)</span>
-              <span className={dre.grossRevenue >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
+              <span className={(Number(dre.grossRevenue) || 0) >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
                 + {formatCurrency(dre.grossRevenue)}
               </span>
             </div>
@@ -547,7 +598,7 @@ export default function RelatoriosPage() {
             
             <div className={`${styles.dreRow} ${styles.dreRowSubtotal}`}>
               <span>(=) Margem Bruta</span>
-              <span className={dre.grossMargin >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
+              <span className={(Number(dre.grossMargin) || 0) >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
                 {formatCurrency(dre.grossMargin)}
               </span>
             </div>
@@ -569,7 +620,7 @@ export default function RelatoriosPage() {
             
             <div className={`${styles.dreRow} ${styles.dreRowNetProfit}`}>
               <span>(=) Lucro Líquido Real</span>
-              <span className={dre.netProfit >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
+              <span className={(Number(dre.netProfit) || 0) >= 0 ? styles.dreValuePositive : styles.dreValueNegative}>
                 {formatCurrency(dre.netProfit)}
               </span>
             </div>
@@ -595,17 +646,17 @@ export default function RelatoriosPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={visibleColumns.sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={visibleColumns.sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
                 ) : data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt).map(s => {
-                  const comm = s.user?.commissionPercent !== null && s.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
-                  const commVal = (Number(s.totalAmount) || 0) * (comm / 100)
-                  const isVoided = !!s.deletedAt
+                  const comm = s?.user?.commissionPercent !== null && s?.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
+                  const commVal = (Number(s?.totalAmount) || 0) * (Number(comm) / 100)
+                  const isVoided = !!s?.deletedAt
 
                   return (
                     <tr key={s.id} className={isVoided ? styles.voidedRow : ''}>
-                      {isColVisible('date') && <td>{new Date(s.createdAt).toLocaleDateString()}</td>}
+                      {isColVisible('date') && <td>{formatDate(s.createdAt)}</td>}
                       {isColVisible('customer') && (
                         <td>
                           {s.customer?.name || '---'}
@@ -613,11 +664,11 @@ export default function RelatoriosPage() {
                       )}
                       {isColVisible('items') && (
                         <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
-                          {s.items ? s.items.map((i: any) => `${i.quantity}x ${i.product?.name || 'Item'}`).join(', ') : '---'}
+                          {s.items && Array.isArray(s.items) ? s.items.map((i: any) => `${i?.quantity || 1}x ${i?.product?.name || 'Item'}`).join(', ') : '---'}
                         </td>
                       )}
                       {isColVisible('seller') && isAdmin && <td>{s.user?.name || '---'} <span style={{ fontSize: '0.7em', color: '#888' }}>({comm}%)</span></td>}
-                      {isColVisible('method') && <td>{s.paymentMethod}</td>}
+                      {isColVisible('method') && <td>{s.paymentMethod || '---'}</td>}
                       {isColVisible('commission') && <td style={{ color: isVoided ? '#999' : 'var(--success)', fontWeight: 'bold' }}>{formatCurrency(commVal)}</td>}
                       {isColVisible('total') && isAdmin && <td style={{ fontWeight: 'bold', color: isVoided ? '#999' : 'var(--gold-primary)' }}>{formatCurrency(s.totalAmount)}</td>}
                       {isColVisible('actions') && isAdmin && (
@@ -645,8 +696,8 @@ export default function RelatoriosPage() {
                         data
                           .filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt)
                           .reduce((acc, s) => {
-                            const comm = s.user?.commissionPercent !== null && s.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
-                            return acc + (Number(s.totalAmount) || 0) * (comm / 100)
+                            const comm = s?.user?.commissionPercent !== null && s?.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
+                            return acc + (Number(s?.totalAmount) || 0) * (Number(comm) / 100)
                           }, 0)
                       )}
                     </td>
@@ -671,18 +722,18 @@ export default function RelatoriosPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={visibleColumns.deleted_sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !!s.deletedAt).length === 0 ? (
-                  <tr><td colSpan={visibleColumns.deleted_sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda excluída encontrada.</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda excluída encontrada.</td></tr>
                 ) : data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !!s.deletedAt).map(s => (
                   <tr key={s.id} className={styles.voidedRow}>
-                    {isColVisible('date') && <td>{new Date(s.createdAt).toLocaleDateString()}</td>}
+                    {isColVisible('date') && <td>{formatDate(s.createdAt)}</td>}
                     {isColVisible('customer') && <td>{s.customer?.name || '---'}</td>}
                     {isColVisible('seller') && <td>{s.user?.name || '---'}</td>}
                     {isColVisible('total') && <td style={{ fontWeight: 'bold' }}>{formatCurrency(s.totalAmount)}</td>}
                     {isColVisible('justification') && (
                       <td style={{ fontSize: '0.85rem', color: '#666', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {s.deletionJustification}
+                        {s.deletionJustification || '---'}
                       </td>
                     )}
                     {isColVisible('actions') && (
@@ -716,12 +767,12 @@ export default function RelatoriosPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={visibleColumns.shipping.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={visibleColumns.shipping.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum envio finalizado encontrado.</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum envio finalizado encontrado.</td></tr>
                 ) : data.map(s => (
                   <tr key={s.id}>
-                    {isColVisible('date') && <td>{new Date(s.createdAt).toLocaleDateString()}</td>}
+                    {isColVisible('date') && <td>{formatDate(s.createdAt)}</td>}
                     {isColVisible('customer') && <td style={{ fontWeight: '600' }}>{s.customer?.name || '---'}</td>}
                     {isColVisible('phone') && <td>{s.customer?.phone || '---'}</td>}
                     {isColVisible('seller') && <td>{s.user?.name || '---'}</td>}
@@ -753,17 +804,16 @@ export default function RelatoriosPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={visibleColumns.appointments.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={visibleColumns.appointments.length} style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>Nenhuma consulta no período.</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>Nenhuma consulta no período.</td></tr>
                 ) : data.map((a: any) => {
-                  const dt = new Date(a.date)
-                  const statusColor = a.status === 'COMPLETED' ? 'var(--success)' : a.status === 'CANCELLED' ? 'var(--error)' : 'var(--gold-primary)'
-                  const statusLabel = a.status === 'COMPLETED' ? 'Realizada' : a.status === 'CANCELLED' ? 'Cancelada' : 'Agendada'
+                  const statusColor = a?.status === 'COMPLETED' ? 'var(--success)' : a?.status === 'CANCELLED' ? 'var(--error)' : 'var(--gold-primary)'
+                  const statusLabel = a?.status === 'COMPLETED' ? 'Realizada' : a?.status === 'CANCELLED' ? 'Cancelada' : 'Agendada'
                   return (
                     <tr key={a.id}>
-                      {isColVisible('date') && <td>{dt.toLocaleDateString()}</td>}
-                      {isColVisible('time') && <td>{dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>}
+                      {isColVisible('date') && <td>{formatDate(a.date)}</td>}
+                      {isColVisible('time') && <td>{formatTime(a.date)}</td>}
                       {isColVisible('customer') && <td style={{ fontWeight: '600' }}>{a.customer?.name || '---'}</td>}
                       {isColVisible('phone') && <td>{a.customer?.phone || '---'}</td>}
                       {isColVisible('status') && <td><span style={{ color: statusColor, fontWeight: 'bold' }}>{statusLabel}</span></td>}
@@ -788,20 +838,23 @@ export default function RelatoriosPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={visibleColumns.inventory.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
-                ) : data.map(p => (
-                  <tr key={p.id}>
-                    {isColVisible('product') && <td>{p.name}</td>}
-                    {isColVisible('supplier') && <td>{p.supplier?.name || '---'}</td>}
-                    {isColVisible('cost') && <td>{formatCurrency(p.cost)}</td>}
-                    {isColVisible('price') && <td>{formatCurrency(p.price)}</td>}
-                    {isColVisible('stock') && (
-                      <td style={{ fontWeight: 'bold', color: p.stock <= 5 ? 'var(--error)' : 'inherit' }}>
-                        {p.stock <= 5 ? `⚠️ ${p.stock}` : p.stock}
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                ) : data.map(p => {
+                  const stockNum = Number(p?.stock) || 0
+                  return (
+                    <tr key={p.id}>
+                      {isColVisible('product') && <td>{p.name || '---'}</td>}
+                      {isColVisible('supplier') && <td>{p.supplier?.name || '---'}</td>}
+                      {isColVisible('cost') && <td>{formatCurrency(p.cost)}</td>}
+                      {isColVisible('price') && <td>{formatCurrency(p.price)}</td>}
+                      {isColVisible('stock') && (
+                        <td style={{ fontWeight: 'bold', color: stockNum <= 5 ? 'var(--error)' : 'inherit' }}>
+                          {stockNum <= 5 ? `⚠️ ${stockNum}` : stockNum}
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
               </tbody>
             </>
           )}
@@ -819,13 +872,13 @@ export default function RelatoriosPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={visibleColumns.financial.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={visibleColumns.financial.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma transação encontrada.</td></tr>
+                  <tr><td colSpan={currentTabColCount} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma transação encontrada.</td></tr>
                 ) : data.map(t => (
                   <tr key={t.id}>
-                    {isColVisible('date') && <td>{new Date(t.createdAt).toLocaleDateString()}</td>}
-                    {isColVisible('description') && <td>{t.description}</td>}
+                    {isColVisible('date') && <td>{formatDate(t.createdAt)}</td>}
+                    {isColVisible('description') && <td>{t.description || '---'}</td>}
                     {isColVisible('bank') && <td>{t.bank?.name || '---'}</td>}
                     {isColVisible('type') && <td>{t.type === 'INCOME' ? 'Receita' : 'Despesa'}</td>}
                     {isColVisible('amount') && (
@@ -879,7 +932,7 @@ export default function RelatoriosPage() {
               "{selectedSale?.deletionJustification || 'Sem justificativa informada.'}"
             </p>
             <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '1.5rem' }}>
-              Excluída em: {selectedSale?.deletedAt ? new Date(selectedSale.deletedAt).toLocaleString() : '---'}
+              Excluída em: {formatDateTime(selectedSale?.deletedAt)}
             </div>
             <div className={styles.modalActions}>
               <Button onClick={() => setShowJustificationModal(false)}>Fechar</Button>
