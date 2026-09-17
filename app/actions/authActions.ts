@@ -41,7 +41,8 @@ export async function loginAction(email: string, password: string) {
       requirePasswordChange: user.requirePasswordChange 
     }
   } catch (err: any) {
-    return { error: 'Erro ao fazer login' }
+    console.error('Login action error:', err);
+    return { error: `Erro ao fazer login: ${err.message || String(err)}` }
   }
 }
 

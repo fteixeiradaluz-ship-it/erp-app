@@ -75,8 +75,26 @@ export default function Sidebar({ role, permissions, logo, companyName, isOpen, 
         </nav>
 
         <div className={styles.footer}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 0.75rem',
+            background: 'var(--gold-50)',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-color)',
+            marginBottom: '0.5rem',
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)'
+          }}>
+            <span>{role === 'ADMIN' ? '🛡️' : role === 'SECRETARY' ? '📋' : '👤'}</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+              {role === 'ADMIN' ? 'Administrador' : role === 'SECRETARY' ? 'Recepção' : 'Profissional'}
+            </span>
+          </div>
+
           <button onClick={handleLogout} className={styles.logoutBtn}>
-            🚪 Sair
+            🚪 Sair do Sistema
           </button>
         </div>
       </aside>

@@ -1,11 +1,14 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import styles from './dashboard.module.css'
 import { getDashboardStats, getPendingPayables } from '@/app/actions/financialActions'
 import { getAppointments } from '@/app/actions/appointmentActions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { Badge } from '@/components/ui/Badge'
 import { formatCurrency } from '@/lib/format'
 
 export default function DashboardPage() {
@@ -30,7 +33,6 @@ export default function DashboardPage() {
       }
       
       if (apptRes.success) {
-        // Filter those within ~24h of from now, and only SCHEDULED
         const now = new Date()
         const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
         
@@ -63,7 +65,34 @@ export default function DashboardPage() {
     load()
   }, [])
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Carregando dados do dashboard...</div>
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <Skeleton width="280px" height="32px" style={{ marginBottom: '8px' }} />
+            <Skeleton width="400px" height="18px" />
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Skeleton width="120px" height="38px" borderRadius="8px" />
+            <Skeleton width="120px" height="38px" borderRadius="8px" />
+          </div>
+        </div>
+
+        <div className={styles.statsGrid} style={{ marginTop: '1.5rem' }}>
+          <Skeleton height="120px" borderRadius="12px" />
+          <Skeleton height="120px" borderRadius="12px" />
+          <Skeleton height="120px" borderRadius="12px" />
+          <Skeleton height="120px" borderRadius="12px" />
+        </div>
+
+        <div className={styles.chartsGrid} style={{ marginTop: '1.5rem' }}>
+          <Skeleton height="320px" borderRadius="12px" />
+          <Skeleton height="320px" borderRadius="12px" />
+        </div>
+      </div>
+    )
+  }
 
   const { stats, chartData, paymentMethodStats } = data
   const maxAmount = Math.max(...chartData.map((d: any) => d.amount), 100)
@@ -79,8 +108,8 @@ export default function DashboardPage() {
     const offset = currentOffset
     currentOffset -= (percentage * circumference)
     
-    const colors: Record<string, string> = { 'PIX': '#4caf50', 'A_VISTA': 'var(--gold-primary)', 'CARTAO': '#2196f3' }
-    const labels: Record<string, string> = { 'PIX': 'PIX', 'A_VISTA': 'Dinheiro', 'CARTAO': 'Cartão (A Receber)' }
+    const colors: Record<string, string> = { 'PIX': '#10b981', 'A_VISTA': 'var(--gold-primary)', 'CARTAO': '#3b82f6', 'DEBITO': '#8b5cf6', 'MULTIPLO': '#f59e0b' }
+    const labels: Record<string, string> = { 'PIX': 'PIX', 'A_VISTA': 'Dinheiro', 'CARTAO': 'Cartão Crédito', 'DEBITO': 'Cartão Débito', 'MULTIPLO': 'Dividido' }
 
     return { 
       method, 
@@ -95,29 +124,60 @@ export default function DashboardPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>📊 Visão Geral do Negócio</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Confira os resultados dos últimos 30 dias com precisão premium.</p>
+        <div>
+          <h1>📊 Visão Geral do Negócio</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Acompanhamento em tempo real de faturamento, fluxo e operações.</p>
+        </div>
+
+        {/* Quick Action Shortcuts */}
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <Link href="/pos">
+            <Button style={{ background: 'var(--gold-gradient)', color: '#fff', fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+              🛒 Nova Venda
+            </Button>
+          </Link>
+          <Link href="/agenda">
+            <Button variant="secondary" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+              📅 Agendamento
+            </Button>
+          </Link>
+          <Link href="/financeiro">
+            <Button variant="secondary" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+              💰 Lançamento
+            </Button>
+          </Link>
+        </div>
       </header>
 
+      {/* KPI Cards */}
       <section className={styles.statsGrid}>
         <Card className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Faturamento Bruto</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={styles.kpiLabel}>Faturamento Bruto</span>
+            <Badge variant="gold">30 Dias</Badge>
+          </div>
           <span className={styles.kpiValue} style={{ color: 'var(--gold-primary)' }}>
             {formatCurrency(stats.totalRevenue)}
           </span>
-          <span className={styles.kpiTrend}>Ult. 30 dias</span>
+          <span className={styles.kpiTrend}>Volume: {stats.saleCount} vendas</span>
         </Card>
 
         <Card className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Lucro Estimado</span>
-          <span className={styles.kpiValue} style={{ color: '#4caf50' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={styles.kpiLabel}>Lucro Estimado</span>
+            <Badge variant="success">Margem Líquida</Badge>
+          </div>
+          <span className={styles.kpiValue} style={{ color: 'var(--success)' }}>
             {formatCurrency(stats.estProfit)}
           </span>
-          <span className={styles.kpiTrend}>Volume de Vendas: {stats.saleCount}</span>
+          <span className={styles.kpiTrend}>Margem: {((stats.estProfit / (stats.totalRevenue || 1)) * 100).toFixed(1)}%</span>
         </Card>
 
         <Card className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>A Receber (Cartão)</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={styles.kpiLabel}>A Receber (Cartão)</span>
+            <Badge variant="info">Previsão</Badge>
+          </div>
           <span className={styles.kpiValue}>
             {formatCurrency(stats.pendingAmount)}
           </span>
@@ -125,19 +185,23 @@ export default function DashboardPage() {
         </Card>
 
         <Card className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>A Pagar (Despesas)</span>
-          <span className={styles.kpiValue} style={{ color: '#d97706' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={styles.kpiLabel}>A Pagar (Despesas)</span>
+            <Badge variant="warning">Compromissos</Badge>
+          </div>
+          <span className={styles.kpiValue} style={{ color: 'var(--warning)' }}>
             {formatCurrency(stats.payableAmount)}
           </span>
           <span className={styles.kpiTrend}>Próximos 30 dias</span>
         </Card>
       </section>
 
+      {/* Charts Section */}
       <section className={styles.chartsGrid}>
         <Card className={styles.chartCard}>
           <div className={styles.chartHeader}>
             <h3 className={styles.chartTitle}>Faturamento Diário</h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Resumo últimos 30 dias</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Evolução dos últimos 30 dias</span>
           </div>
 
           <div className={styles.chartContainer}>
@@ -156,7 +220,7 @@ export default function DashboardPage() {
                     </div>
                     <div 
                       className={styles.bar} 
-                      style={{ height: `${Math.max(heightPercentage, 2)}%` }}
+                      style={{ height: `${Math.max(heightPercentage, 3)}%` }}
                     ></div>
                     {i % 5 === 0 && (
                       <span className={styles.axisLabel}>{day}/{d.date.split('-')[1]}</span>
@@ -171,7 +235,7 @@ export default function DashboardPage() {
         <Card className={styles.chartCard}>
           <div className={styles.chartHeader}>
             <h3 className={styles.chartTitle}>Métodos de Pagamento</h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Distribuição de receita</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Distribuição da receita faturada</span>
           </div>
 
           <div className={styles.donutSection}>
@@ -212,18 +276,21 @@ export default function DashboardPage() {
         </Card>
       </section>
 
+      {/* System Alerts and Performance */}
       <section className={styles.chartsGrid}>
-         <Card className={styles.chartCard} style={{ background: 'rgba(255,255,255,0.02)' }}>
-            <h3 className={styles.chartTitle} style={{ marginBottom: '1.5rem' }}>📢 Alertas do Sistema</h3>
+         <Card className={styles.chartCard}>
+            <h3 className={styles.chartTitle} style={{ marginBottom: '1.2rem' }}>📢 Painel de Alertas Operacionais</h3>
             <div className={styles.alertsPanel}>
                {stats.lowStockCount > 0 && (
                   <div className={`${styles.alertItem} ${styles.alertCritical}`}>
                      <span className={styles.alertIcon}>⚠️</span>
                      <div className={styles.alertContent}>
-                        <h4>Estoque Crítico</h4>
-                        <p>Existem <strong>{stats.lowStockCount}</strong> produtos com estoque muito baixo.</p>
+                        <h4>Estoque de Segurança</h4>
+                        <p>Existem <strong>{stats.lowStockCount}</strong> produtos abaixo da quantidade mínima.</p>
                      </div>
-                     <Button variant="secondary" onClick={() => window.location.href='/estoque'} style={{marginLeft:'auto', fontSize:'0.75rem'}}>Ver</Button>
+                     <Link href="/estoque" style={{ marginLeft: 'auto' }}>
+                       <Button variant="secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>Ver Estoque</Button>
+                     </Link>
                   </div>
                )}
                
@@ -231,51 +298,58 @@ export default function DashboardPage() {
                   <div className={`${styles.alertItem} ${styles.alertWarning}`}>
                      <span className={styles.alertIcon}>⏳</span>
                      <div className={styles.alertContent}>
-                        <h4>Receitas Pendentes</h4>
-                        <p>Você tem <strong>{formatCurrency(stats.pendingAmount)}</strong> a receber em cartões.</p>
+                        <h4>Receitas a Compensar</h4>
+                        <p>Total de <strong>{formatCurrency(stats.pendingAmount)}</strong> a compensar no cartão.</p>
                      </div>
-                     <Button variant="secondary" onClick={() => window.location.href='/financeiro'} style={{marginLeft:'auto', fontSize:'0.75rem'}}>Fluxo</Button>
+                     <Link href="/financeiro" style={{ marginLeft: 'auto' }}>
+                       <Button variant="secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>Fluxo</Button>
+                     </Link>
                   </div>
                )}
 
                {upcomingAppointments.length > 0 && (
-                  <div className={`${styles.alertItem}`} style={{ background: 'rgba(2, 132, 199, 0.1)', border: '1px solid rgba(2, 132, 199, 0.3)' }}>
+                  <div className={`${styles.alertItem}`} style={{ background: 'rgba(26, 92, 115, 0.08)', border: '1px solid rgba(26, 92, 115, 0.25)' }}>
                      <span className={styles.alertIcon}>🩺</span>
                      <div className={styles.alertContent}>
-                        <h4 style={{ color: '#0ea5e9' }}>Consultas Próximas (Em até 24h)</h4>
-                        <p>Você tem <strong>{upcomingAppointments.length}</strong> consulta{upcomingAppointments.length !== 1 ? 's' : ''} agendada{upcomingAppointments.length !== 1 ? 's' : ''}.</p>
+                        <h4 style={{ color: 'var(--info)' }}>Atendimentos em até 24 Horas</h4>
+                        <p>Você tem <strong>{upcomingAppointments.length}</strong> consulta(s) agendada(s) para breve.</p>
                      </div>
-                     <Button variant="secondary" onClick={() => window.location.href='/agenda'} style={{marginLeft:'auto', fontSize:'0.75rem'}}>Ver Agenda</Button>
+                     <Link href="/agenda" style={{ marginLeft: 'auto' }}>
+                       <Button variant="secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>Agenda</Button>
+                     </Link>
                   </div>
                )}
 
                {(payablesAlert.overdue > 0 || payablesAlert.upcoming > 0) && (
-                  <div className={`${styles.alertItem}`} style={{ background: payablesAlert.overdue > 0 ? 'rgba(220, 38, 38, 0.1)' : 'rgba(217, 119, 6, 0.1)', border: `1px solid ${payablesAlert.overdue > 0 ? 'rgba(220, 38, 38, 0.3)' : 'rgba(217, 119, 6, 0.3)'}` }}>
+                  <div className={`${styles.alertItem}`} style={{ background: payablesAlert.overdue > 0 ? 'rgba(165, 24, 62, 0.08)' : 'rgba(176, 92, 0, 0.08)', border: `1px solid ${payablesAlert.overdue > 0 ? 'rgba(165, 24, 62, 0.25)' : 'rgba(176, 92, 0, 0.25)'}` }}>
                      <span className={styles.alertIcon}>💸</span>
                      <div className={styles.alertContent}>
-                        <h4 style={{ color: payablesAlert.overdue > 0 ? '#dc2626' : '#d97706' }}>Lembrete de Contas a Pagar</h4>
-                        {payablesAlert.overdue > 0 && <p>Você tem <strong>{payablesAlert.overdue}</strong> fatura(s) <strong>ATRASA(S)</strong>.</p>}
-                        {payablesAlert.upcoming > 0 && <p>Você tem <strong>{payablesAlert.upcoming}</strong> fatura(s) vencendo nos próximos 7 dias.</p>}
+                        <h4 style={{ color: payablesAlert.overdue > 0 ? 'var(--error)' : 'var(--warning)' }}>Vencimentos a Pagar</h4>
+                        {payablesAlert.overdue > 0 && <p>Atenção: <strong>{payablesAlert.overdue}</strong> conta(s) <strong>VENCIDA(S)</strong>.</p>}
+                        {payablesAlert.upcoming > 0 && <p><strong>{payablesAlert.upcoming}</strong> fatura(s) vencendo nos próximos 7 dias.</p>}
                      </div>
-                     <Button variant="secondary" onClick={() => window.location.href='/contas-pagar'} style={{marginLeft:'auto', fontSize:'0.75rem'}}>Ver Contas</Button>
+                     <Link href="/contas-pagar" style={{ marginLeft: 'auto' }}>
+                       <Button variant="secondary" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>Ver Contas</Button>
+                     </Link>
                   </div>
                )}
 
                {stats.lowStockCount === 0 && stats.pendingAmount === 0 && upcomingAppointments.length === 0 && payablesAlert.overdue === 0 && payablesAlert.upcoming === 0 && (
-                  <p style={{ color: '#666', fontStyle: 'italic', textAlign: 'center' }}>Nenhum alerta pendente no momento.</p>
+                  <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', padding: '1rem' }}>
+                    Tudo em dia! Nenhum alerta crítico pendente.
+                  </p>
                )}
             </div>
          </Card>
 
-         <Card style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.1) 0%, #ffffff 100%)', border: '1px solid var(--border-gold)' }}>
-             <h3 style={{ color: 'var(--gold-primary)', marginBottom: '0.5rem' }}>💡 Resumo de Performance</h3>
-             <p style={{ fontSize: '0.9rem', color: '#444', lineHeight: '1.6' }}>
-               Seu lucro bruto atual é de <strong>{formatCurrency(stats.totalRevenue - stats.estProfit)}</strong> nos últimos 30 dias. 
-               A margem de lucro estimada está em <strong>{((stats.estProfit / (stats.totalRevenue || 1)) * 100).toFixed(1)}%</strong>. 
+         <Card style={{ background: 'linear-gradient(135deg, rgba(197,168,92,0.12) 0%, #ffffff 100%)', border: '1px solid var(--border-gold)' }}>
+             <h3 style={{ color: 'var(--gold-primary)', marginBottom: '0.75rem' }}>💡 Indicadores Gerenciais</h3>
+             <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: '1.6' }}>
+               Faturamento Líquido acumulado de <strong>{formatCurrency(stats.totalRevenue)}</strong> com lucro estimado em <strong>{formatCurrency(stats.estProfit)}</strong>.
              </p>
-             <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0,0,0,0.02)', borderRadius: '8px' }}>
-                <p style={{ fontSize: '0.8rem', color: '#666' }}>
-                   <strong>Dica:</strong> {stats.lowStockCount > 0 ? 'Reponha itens críticos para não perder vendas.' : 'Seu estoque está bem equilibrado.'}
+             <div style={{ marginTop: '1.25rem', padding: '1rem', background: 'rgba(255,255,255,0.8)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                   <strong>Status do Estoque:</strong> {stats.lowStockCount > 0 ? 'Reponha itens no estoque de segurança para garantir atendimento contínuo.' : 'Estoque equilibrado.'}
                 </p>
              </div>
          </Card>

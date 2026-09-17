@@ -33,12 +33,17 @@ export async function parseBankStatement(formData: FormData) {
       orderBy: { dueDate: 'asc' }
     })
 
-    // Cruzar as transações do extrato com transações pendentes cadastradas
+    // Buscar lançamentos já pagos para detecção inteligente de duplicatas
+    const existingPaid = await prisma.transaction.findMany({
+      where: { status: 'PAID', deletedAt: null, bankId: bankId }
+    })
+
+    // Cruzar as transações do extrato com transações pendentes cadastradas e verificar duplicatas
     const matchedTransactions = transactions.map(tx => {
       const type = tx.amount > 0 ? 'INCOME' : 'EXPENSE'
       const amount = Math.abs(tx.amount)
 
-      // Regra de cruzamento: mesmo tipo, valor idêntico e vencimento próximo (margem de 10 dias)
+      // Regra de conciliação: mesmo tipo, valor idêntico e vencimento próximo (margem de 10 dias)
       const match = pending.find(p => {
         if (p.type !== type) return false
         if (Math.abs(p.amount - amount) > 0.01) return false
@@ -49,10 +54,24 @@ export async function parseBankStatement(formData: FormData) {
         return diffDays <= 10
       })
 
+      // Regra de detecção de duplicatas: lançamento já pago idêntico na mesma faixa de dias
+      const duplicate = existingPaid.find(p => {
+        if (p.type !== type) return false
+        if (Math.abs(p.amount - amount) > 0.01) return false
+        const targetDate = p.payDate || p.createdAt
+        const diffTime = Math.abs(new Date(targetDate).getTime() - new Date(tx.date).getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        return diffDays <= 3
+      })
+
+      const isDuplicate = Boolean(duplicate && !match)
+
       return {
         ...tx,
         reconcileWithId: match ? match.id : null,
-        reconcileWithDesc: match ? match.description : null
+        reconcileWithDesc: match ? match.description : null,
+        isDuplicate,
+        selected: !isDuplicate
       }
     })
 

@@ -12,6 +12,9 @@ export default function ConfiguracoesPage() {
     commission: '0',
     tax: '0',
     fixedExpenses: '0',
+    cardFeeDebit: '1.5',
+    cardFeeCredit1x: '2.5',
+    cardFeeCreditInstallments: '3.5',
     companyName: '',
     companyCnpj: '',
     companyAddress: '',
@@ -32,6 +35,9 @@ export default function ConfiguracoesPage() {
           commission: res.settings.commissionPercentage.toString(),
           tax: res.settings.taxPercentage.toString(),
           fixedExpenses: res.settings.fixedExpensesPercentage.toString(),
+          cardFeeDebit: (res.settings.cardFeeDebit ?? 1.5).toString(),
+          cardFeeCredit1x: (res.settings.cardFeeCredit1x ?? 2.5).toString(),
+          cardFeeCreditInstallments: (res.settings.cardFeeCreditInstallments ?? 3.5).toString(),
           companyName: res.settings.companyName || '',
           companyCnpj: res.settings.companyCnpj || '',
           companyAddress: res.settings.companyAddress || '',
@@ -69,6 +75,9 @@ export default function ConfiguracoesPage() {
       commission: parseFloat(formData.commission),
       tax: parseFloat(formData.tax),
       fixedExpenses: parseFloat(formData.fixedExpenses),
+      cardFeeDebit: parseFloat(formData.cardFeeDebit),
+      cardFeeCredit1x: parseFloat(formData.cardFeeCredit1x),
+      cardFeeCreditInstallments: parseFloat(formData.cardFeeCreditInstallments),
       companyName: formData.companyName,
       companyCnpj: formData.companyCnpj,
       companyAddress: formData.companyAddress,
@@ -157,6 +166,36 @@ export default function ConfiguracoesPage() {
                 step="0.1" 
                 value={formData.commission}
                 onChange={(e) => setFormData({...formData, commission: e.target.value})}
+                required
+              />
+            </div>
+          </div>
+
+          <div className={styles.section}>
+            <h2>Taxas de Operadora de Cartão (PDV)</h2>
+            <div className={styles.inputGrid}>
+              <Input 
+                label="Taxa Cartão de Débito (%)" 
+                type="number" 
+                step="0.01" 
+                value={formData.cardFeeDebit}
+                onChange={(e) => setFormData({...formData, cardFeeDebit: e.target.value})}
+                required
+              />
+              <Input 
+                label="Taxa Cartão de Crédito à Vista (1x) (%)" 
+                type="number" 
+                step="0.01" 
+                value={formData.cardFeeCredit1x}
+                onChange={(e) => setFormData({...formData, cardFeeCredit1x: e.target.value})}
+                required
+              />
+              <Input 
+                label="Taxa Cartão de Crédito Parcelado (2x+) (%)" 
+                type="number" 
+                step="0.01" 
+                value={formData.cardFeeCreditInstallments}
+                onChange={(e) => setFormData({...formData, cardFeeCreditInstallments: e.target.value})}
                 required
               />
             </div>

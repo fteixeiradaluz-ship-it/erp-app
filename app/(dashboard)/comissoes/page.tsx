@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import styles from './comissoes.module.css'
-import { getCommissionsData, payTransaction } from '@/app/actions/financialActions'
+import { getCommissionsData, payTransaction, payCommissionsBatch } from '@/app/actions/financialActions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency } from '@/lib/format'
@@ -13,6 +13,13 @@ export default function ComissoesPage() {
   const [data, setData] = useState<any>(null)
   const [transactions, setTransactions] = useState<any[]>([])
   
+  // Selection for Batch Payment
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false)
+  const [batchBankId, setBatchBankId] = useState('')
+  const [batchPayDate, setBatchPayDate] = useState(new Date().toISOString().split('T')[0])
+  const [submittingBatch, setSubmittingBatch] = useState(false)
+
   // Filter states
   const [sellerFilter, setSellerFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL') // ALL, PAID, PENDING
@@ -27,6 +34,9 @@ export default function ComissoesPage() {
     if (res.success) {
       setData(res)
       setTransactions(res.transactions)
+      if (res.banks && res.banks.length > 0 && !batchBankId) {
+        setBatchBankId(res.banks[0].id)
+      }
     } else {
       alert(res.error || 'Erro ao carregar dados de comissão')
     }
@@ -44,6 +54,44 @@ export default function ComissoesPage() {
       alert(res.error || 'Erro ao efetuar pagamento do repasse')
     }
     setPayingId(null)
+  }
+
+  const toggleSelectAll = () => {
+    const pendingIds = filteredTransactions.filter(t => t.status === 'PENDING').map(t => t.id)
+    if (selectedIds.length === pendingIds.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(pendingIds)
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    )
+  }
+
+  const handleBatchPaySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!batchBankId) return alert('Selecione a conta bancária de origem!')
+    if (selectedIds.length === 0) return alert('Nenhum repasse selecionado!')
+
+    setSubmittingBatch(true)
+    const res = await payCommissionsBatch({
+      transactionIds: selectedIds,
+      bankId: batchBankId,
+      payDate: batchPayDate
+    })
+
+    if (res.success) {
+      alert(`${selectedIds.length} repasses de comissão foram liquidados com sucesso!`)
+      setSelectedIds([])
+      setIsBatchModalOpen(false)
+      await load()
+    } else {
+      alert(res.error || 'Erro ao liquidar repasses em lote')
+    }
+    setSubmittingBatch(false)
   }
 
   if (loading && !data) {
@@ -65,6 +113,11 @@ export default function ComissoesPage() {
   const totalPaid = filteredTransactions.filter(t => t.status === 'PAID').reduce((acc, t) => acc + t.amount, 0)
   const totalPending = filteredTransactions.filter(t => t.status === 'PENDING').reduce((acc, t) => acc + t.amount, 0)
 
+  // Selected Amount Calculation
+  const selectedTransactions = transactions.filter(t => selectedIds.includes(t.id))
+  const selectedTotalAmount = selectedTransactions.reduce((sum, t) => sum + t.amount, 0)
+  const pendingCount = filteredTransactions.filter(t => t.status === 'PENDING').length
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -74,16 +127,23 @@ export default function ComissoesPage() {
             Acompanhe o faturamento, comissões acumuladas e status de repasses profissionais.
           </p>
         </div>
-        <span style={{
-          fontSize: '0.75rem',
-          padding: '0.3rem 0.8rem',
-          borderRadius: '99px',
-          background: isAdmin ? 'var(--gold-light)' : 'rgba(2, 136, 209, 0.1)',
-          color: isAdmin ? 'var(--gold-primary)' : 'var(--info)',
-          border: `1px solid ${isAdmin ? 'var(--border-gold)' : 'rgba(2, 136, 209, 0.2)'}`,
-        }}>
-          {isAdmin ? '🛡️ Visualização: ADMIN (Gestão de Repasses)' : '👤 Visualização: VENDEDOR (Minhas Comissões)'}
-        </span>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          {isAdmin && selectedIds.length > 0 && (
+            <Button onClick={() => setIsBatchModalOpen(true)} style={{ background: 'var(--success)' }}>
+              ⚡ Liquidar Selecionadas ({selectedIds.length} - {formatCurrency(selectedTotalAmount)})
+            </Button>
+          )}
+          <span style={{
+            fontSize: '0.75rem',
+            padding: '0.3rem 0.8rem',
+            borderRadius: '99px',
+            background: isAdmin ? 'var(--gold-light)' : 'rgba(2, 136, 209, 0.1)',
+            color: isAdmin ? 'var(--gold-primary)' : 'var(--info)',
+            border: `1px solid ${isAdmin ? 'var(--border-gold)' : 'rgba(2, 136, 209, 0.2)'}`,
+          }}>
+            {isAdmin ? '🛡️ Visualização: ADMIN (Gestão de Repasses)' : '👤 Visualização: VENDEDOR (Minhas Comissões)'}
+          </span>
+        </div>
       </header>
 
       {/* Stats Cards */}
@@ -133,7 +193,7 @@ export default function ComissoesPage() {
           </select>
         </div>
 
-        <Button variant="secondary" onClick={() => { setSellerFilter(''); setStatusFilter('ALL') }}>
+        <Button variant="secondary" onClick={() => { setSellerFilter(''); setStatusFilter('ALL'); setSelectedIds([]); }}>
           Limpar Filtros
         </Button>
       </Card>
@@ -143,6 +203,16 @@ export default function ComissoesPage() {
         <table className={styles.table}>
           <thead>
             <tr>
+              {isAdmin && (
+                <th style={{ width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={pendingCount > 0 && selectedIds.length === pendingCount}
+                    onChange={toggleSelectAll}
+                    title="Selecionar todas as pendentes"
+                  />
+                </th>
+              )}
               <th>Vencimento</th>
               <th>Descrição do Repasse</th>
               {isAdmin && <th>Profissional</th>}
@@ -155,13 +225,26 @@ export default function ComissoesPage() {
           <tbody>
             {filteredTransactions.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 7 : 5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                <td colSpan={isAdmin ? 8 : 5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
                   Nenhum repasse de comissão encontrado para o filtro selecionado.
                 </td>
               </tr>
             ) : (
               filteredTransactions.map((t) => (
-                <tr key={t.id}>
+                <tr key={t.id} style={{ background: selectedIds.includes(t.id) ? 'rgba(212, 175, 55, 0.08)' : undefined }}>
+                  {isAdmin && (
+                    <td style={{ textAlign: 'center' }}>
+                      {t.status === 'PENDING' ? (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(t.id)}
+                          onChange={() => toggleSelect(t.id)}
+                        />
+                      ) : (
+                        <span style={{ color: '#aaa', fontSize: '0.8rem' }}>✓</span>
+                      )}
+                    </td>
+                  )}
                   <td>{t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'Sem data'}</td>
                   <td style={{ fontWeight: '600' }}>{t.description}</td>
                   {isAdmin && <td>{t.user?.name || 'Vendedor'}</td>}
@@ -205,6 +288,92 @@ export default function ComissoesPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal de Liquidação em Lote */}
+      {isBatchModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem'
+          }}>
+            <h2 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--text-primary)' }}>
+              ⚡ Liquidação de Comissões em Lote
+            </h2>
+            
+            <div style={{ background: 'var(--background)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-gold)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span>Quantidade Selecionada:</span>
+                <strong>{selectedIds.length} repasse(s)</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', color: 'var(--error)' }}>
+                <span>Total a Liquidar:</span>
+                <strong>{formatCurrency(selectedTotalAmount)}</strong>
+              </div>
+            </div>
+
+            <form onSubmit={handleBatchPaySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Conta Bancária de Débito (Saída do Dinheiro)
+                </label>
+                <select
+                  value={batchBankId}
+                  onChange={(e) => setBatchBankId(e.target.value)}
+                  className={styles.select}
+                  style={{ width: '100%' }}
+                  required
+                >
+                  <option value="">-- Selecione o Banco --</option>
+                  {data?.banks?.map((b: any) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} (Saldo: {formatCurrency(b.balance)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Data do Pagamento / Efetivação
+                </label>
+                <input
+                  type="date"
+                  value={batchPayDate}
+                  onChange={(e) => setBatchPayDate(e.target.value)}
+                  className={styles.select}
+                  style={{ width: '100%' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <Button type="button" variant="secondary" onClick={() => setIsBatchModalOpen(false)} style={{ flex: 1 }}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={submittingBatch} style={{ flex: 1, background: 'var(--success)' }}>
+                  {submittingBatch ? 'Processando...' : 'Confirmar Baixa'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

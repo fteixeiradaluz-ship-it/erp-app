@@ -11,66 +11,66 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role               String     @default("SELLER") // ADMIN or SELLER or SECRETARY
-  cpf                String?    @unique
-  phone              String?
-  salary             Float?
-  admissionDate      DateTime?
-  position           String?
-  permissions        String     @default("")
-  requirePasswordChange Boolean  @default(false)
-  commissionPercent  Float?     // Nullable to fallback to global Settings.commissionPercentage if needed
-  sales              Sale[]
-  transactions       Transaction[]
-  logs               AuditLog[]
-  leads              Lead[]
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  id                    String        @id @default(cuid())
+  name                  String
+  email                 String        @unique
+  password              String
+  role                  String        @default("SELLER") // ADMIN or SELLER or SECRETARY
+  cpf                   String?       @unique
+  phone                 String?
+  salary                Float?
+  admissionDate         DateTime?
+  position              String?
+  permissions           String        @default("")
+  requirePasswordChange Boolean       @default(false)
+  commissionPercent     Float?        // Nullable to fallback to global Settings.commissionPercentage if needed
+  sales                 Sale[]
+  transactions          Transaction[]
+  logs                  AuditLog[]
+  leads                 Lead[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 }
 
 model Customer {
-  id              String    @id @default(cuid())
-  name            String
-  cpf             String?   @unique
-  email           String?
-  phone           String?
-  address         String?   // Logradouro
-  number          String?   // Numero
-  complement      String?   // Complemento
-  neighborhood    String?   // Bairro
-  city            String?   // Cidade
-  shippingNotes   String?   @db.Text // Observações para envio
-  generalNotes    String?   @db.Text // Anotações gerais do prontuário
-  sales           Sale[]
-  appointments    Appointment[]
-  medicalRecords  MedicalRecord[]
-  quotations      Quotation[]
-  leads           Lead[]
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String          @id @default(cuid())
+  name           String
+  cpf            String?         @unique
+  email          String?
+  phone          String?
+  address        String?         // Logradouro
+  number         String?         // Numero
+  complement     String?         // Complemento
+  neighborhood   String?         // Bairro
+  city           String?         // Cidade
+  shippingNotes  String?         // Observações para envio
+  generalNotes   String?         // Anotações gerais do prontuário
+  sales          Sale[]
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  quotations     Quotation[]
+  leads          Lead[]
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([deletedAt])
   @@index([createdAt])
 }
 
 model Product {
-  id         String    @id @default(cuid())
+  id         String     @id @default(cuid())
   name       String
   price      Float
   cost       Float
   stock      Int
-  type       String    @default("PRODUCT") // PRODUCT or SERVICE
+  type       String     @default("PRODUCT") // PRODUCT or SERVICE
   saleItems  SaleItem[]
   supplierId String?
-  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  supplier   Supplier?  @relation(fields: [supplierId], references: [id])
   deletedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   @@index([deletedAt])
   @@index([supplierId])
@@ -89,27 +89,27 @@ model Supplier {
 }
 
 model Sale {
-  id              String   @id @default(cuid())
-  userId          String
-  customerId      String
-  user            User     @relation(fields: [userId], references: [id])
-  customer        Customer @relation(fields: [customerId], references: [id])
-  items           SaleItem[]
-  paymentMethod   String   // A_VISTA, PIX, CARTAO
-  installments    Int      @default(1) // Up to 4 for card
-  discount        Float    @default(0) // Percentage or absolute? User said "percentual"
-  totalAmount     Float
+  id            String     @id @default(cuid())
+  userId        String
+  customerId    String
+  user          User       @relation(fields: [userId], references: [id])
+  customer      Customer   @relation(fields: [customerId], references: [id])
+  items         SaleItem[]
+  paymentMethod String     // A_VISTA, PIX, CARTAO, DEBITO, MULTIPLO
+  installments  Int        @default(1) // Up to 4 for card
+  discount      Float      @default(0) // Percentage or absolute
+  totalAmount   Float
   
   // Shipping management
-  nfGenerated     Boolean  @default(false)
-  labelGenerated  Boolean  @default(false)
-  isSent          Boolean  @default(false)
+  nfGenerated    Boolean  @default(false)
+  labelGenerated Boolean  @default(false)
+  isSent         Boolean  @default(false)
   
   deletedAt             DateTime?
   deletionJustification String?
   transactions          Transaction[]
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   @@index([userId])
   @@index([customerId])
@@ -118,34 +118,34 @@ model Sale {
 }
 
 model SaleItem {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   saleId    String
   productId String
-  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id])
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
   quantity  Int
   price     Float
 }
 
 model Bank {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
   agency       String?
   account      String?
-  balance      Float    @default(0)
+  balance      Float         @default(0)
   transactions Transaction[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Transaction {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   bankId      String
-  bank        Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
-  type        String   // INCOME, EXPENSE
+  bank        Bank      @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  type        String    // INCOME, EXPENSE
   amount      Float
   description String
-  status      String   @default("PENDING") // PENDING, PAID
+  status      String    @default("PENDING") // PENDING, PAID
   dueDate     DateTime?
   payDate     DateTime?
   
@@ -157,8 +157,8 @@ model Transaction {
 
   deletedAt             DateTime?
   deletionJustification String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@index([bankId])
   @@index([type])
@@ -166,22 +166,29 @@ model Transaction {
   @@index([deletedAt])
   @@index([dueDate])
   @@index([createdAt])
+  @@index([bankId, status, deletedAt])
+  @@index([saleId])
+  @@index([type, status, deletedAt])
+  @@index([dueDate, status])
 }
 
 model Settings {
-  id                       String   @id @default(cuid())
-  companyName              String   @default("Minha Empresa")
-  companyCnpj              String?
-  companyAddress           String?
-  companyPhone             String?
-  companyLogo              String?
-  commissionPercentage     Float    @default(0)
-  taxPercentage            Float    @default(0)
-  fixedExpensesPercentage  Float    @default(0)
-  retentionDays            Int      @default(90)
-  whatsappTemplateRetention String  @default("Olá {nome}! Notamos que já se passaram {dias} dias desde a sua última compra de {produto} na DERMAE. Gostaria de solicitar uma reposição?")
-  whatsappTemplateLead      String  @default("Olá {nome}! Passando para saber se ficou com alguma dúvida sobre o orçamento de R$ {valor} que geramos para você. Podemos agendar?")
-  updatedAt                DateTime @updatedAt
+  id                        String   @id @default(cuid())
+  companyName               String   @default("Minha Empresa")
+  companyCnpj               String?
+  companyAddress            String?
+  companyPhone              String?
+  companyLogo               String?
+  commissionPercentage      Float    @default(0)
+  taxPercentage             Float    @default(0)
+  fixedExpensesPercentage   Float    @default(0)
+  cardFeeDebit              Float    @default(1.5)
+  cardFeeCredit1x           Float    @default(2.5)
+  cardFeeCreditInstallments  Float    @default(3.5)
+  retentionDays             Int      @default(90)
+  whatsappTemplateRetention String   @default("Olá {nome}! Notamos que já se passaram {dias} dias desde a sua última compra de {produto} na DERMAE. Gostaria de solicitar uma reposição?")
+  whatsappTemplateLead       String   @default("Olá {nome}! Passando para saber se ficou com alguma dúvida sobre o orçamento de R$ {valor} que geramos para você. Podemos agendar?")
+  updatedAt                 DateTime @updatedAt
 }
 
 model AuditLog {
@@ -198,26 +205,26 @@ model AuditLog {
 }
 
 model Appointment {
-  id              String      @id @default(cuid())
-  customerId      String?
-  customer        Customer?   @relation(fields: [customerId], references: [id])
-  date            DateTime
-  description     String?
-  status          String      @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
-  isReturn        Boolean     @default(false)
-  isBlocked       Boolean     @default(false) // New field for blocking slots
-  depositAmount   Float       @default(0)     // Valor de entrada / sinal
-  depositMethod   String?                     // Forma de pagamento do sinal (PIX, CARTAO)
+  id            String        @id @default(cuid())
+  customerId    String?
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  date          DateTime
+  description   String?
+  status        String        @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  isReturn      Boolean       @default(false)
+  isBlocked     Boolean       @default(false) // For blocking slots
+  depositAmount Float         @default(0)     // Valor de entrada / sinal
+  depositMethod String?                       // Forma de pagamento do sinal (PIX, CARTAO)
   
   // Self-relation to link a return appointment back to its original appointment
-  originalApptId  String?
-  originalAppt    Appointment? @relation("ReturnAppointments", fields: [originalApptId], references: [id])
-  returnAppts     Appointment[] @relation("ReturnAppointments")
+  originalApptId String?
+  originalAppt   Appointment?  @relation("ReturnAppointments", fields: [originalApptId], references: [id])
+  returnAppts    Appointment[] @relation("ReturnAppointments")
   
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   
-  medicalRecord   MedicalRecord?
+  medicalRecord  MedicalRecord?
 
   @@index([customerId])
   @@index([date])
@@ -226,54 +233,54 @@ model Appointment {
 }
 
 model MedicalRecord {
-  id              String      @id @default(cuid())
-  customerId      String
-  customer        Customer    @relation(fields: [customerId], references: [id])
-  appointmentId   String?     @unique
-  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
-  content         String      @db.Text
-  authorId        String      // User ID who created the record
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id            String       @id @default(cuid())
+  customerId    String
+  customer      Customer     @relation(fields: [customerId], references: [id])
+  appointmentId String?      @unique
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  content       String
+  authorId      String       // User ID who created the record
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 }
 
 model Quotation {
-  id            String          @id @default(cuid())
-  customerId    String
-  customer      Customer        @relation(fields: [customerId], references: [id])
-  items         QuotationItem[]
-  totalAmount   Float
-  status        String          @default("OPEN") // OPEN, ACCEPTED, REJECTED, CONVERTED
-  validUntil    DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id          String          @id @default(cuid())
+  customerId  String
+  customer    Customer        @relation(fields: [customerId], references: [id])
+  items       QuotationItem[]
+  totalAmount Float
+  status      String          @default("OPEN") // OPEN, ACCEPTED, REJECTED, CONVERTED
+  validUntil  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
 
 model QuotationItem {
-  id            String    @id @default(cuid())
-  quotationId   String
-  quotation     Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  description   String
-  quantity      Int
-  price         Float
+  id          String    @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int
+  price       Float
 }
 
 model Lead {
-  id              String    @id @default(cuid())
+  id              String         @id @default(cuid())
   name            String
   phone           String
-  status          String    @default("NEW") // NEW, MESSAGE_SENT, BOUGHT, NOT_BOUGHT, ARCHIVED, RETORNAR_MES_SEGUINTE, POSSIBLE_CONVERSION
-  notes           String?   @db.Text
+  status          String         @default("NEW") // NEW, MESSAGE_SENT, BOUGHT, NOT_BOUGHT, ARCHIVED, RETORNAR_MES_SEGUINTE, POSSIBLE_CONVERSION
+  notes           String?
   nextContactDate DateTime?
   lastContactAt   DateTime?
-  tags            String    @default("")
+  tags            String         @default("")
   customerId      String?
-  customer        Customer? @relation(fields: [customerId], references: [id])
+  customer        Customer?      @relation(fields: [customerId], references: [id])
   userId          String
-  user            User      @relation(fields: [userId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
   activities      LeadActivity[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@index([status])
   @@index([createdAt])
@@ -284,7 +291,7 @@ model LeadActivity {
   id        String   @id @default(cuid())
   leadId    String
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  content   String    @db.Text
+  content   String
   type      String   @default("NOTE") // NOTE, STATUS_CHANGE, CONTACT
   createdAt DateTime @default(now())
 

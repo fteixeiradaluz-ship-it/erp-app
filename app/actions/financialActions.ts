@@ -424,19 +424,43 @@ export async function deleteTransaction(id: string, reason: string) {
                 }
             })
 
-            // If there's an associated Sale, soft-delete it too
-            // We search by description since we don't have a direct relation in schema
-            // Usually descriptions are like "Venda #xxxxxx"
-            if (transaction.description.startsWith('Venda #')) {
+            // If there's an associated Sale, soft-delete it and restore stock cleanly
+            let associatedSaleId = transaction.saleId
+            if (!associatedSaleId && transaction.description.startsWith('Venda #')) {
                 const saleIdPart = transaction.description.split('#')[1].split(' ')[0]
-                const sale = await tx.sale.findFirst({
+                const foundSale = await tx.sale.findFirst({
                     where: { id: { startsWith: saleIdPart } }
                 })
-                if (sale) {
+                if (foundSale) associatedSaleId = foundSale.id
+            }
+
+            if (associatedSaleId) {
+                const sale = await tx.sale.findUnique({
+                    where: { id: associatedSaleId },
+                    include: { items: true }
+                })
+                if (sale && !sale.deletedAt) {
                     await tx.sale.update({
                         where: { id: sale.id },
-                        data: { deletedAt: new Date() }
+                        data: { 
+                            deletedAt: new Date(),
+                            deletionJustification: `Estorno via exclusão de transação: ${reason}`
+                        }
                     })
+
+                    // Reverter estoque
+                    for (const item of sale.items) {
+                        const p = await tx.product.findUnique({
+                            where: { id: item.productId },
+                            select: { type: true }
+                        })
+                        if (p && p.type === 'PRODUCT') {
+                            await tx.product.update({
+                                where: { id: item.productId },
+                                data: { stock: { increment: item.quantity } }
+                            })
+                        }
+                    }
                 }
             }
         })
@@ -449,6 +473,40 @@ export async function deleteTransaction(id: string, reason: string) {
         return { success: true }
     } catch (err: any) {
         return { error: err.message || 'Erro ao excluir transação' }
+    }
+}
+
+export async function recalculateBankBalances(bankId?: string) {
+    const session = await getSession()
+    if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+
+    try {
+        const banksToAudit = await prisma.bank.findMany({
+            where: bankId ? { id: bankId } : undefined
+        })
+
+        for (const bank of banksToAudit) {
+            const incomeSum = await prisma.transaction.aggregate({
+                where: { bankId: bank.id, status: 'PAID', type: 'INCOME', deletedAt: null },
+                _sum: { amount: true }
+            })
+            const expenseSum = await prisma.transaction.aggregate({
+                where: { bankId: bank.id, status: 'PAID', type: 'EXPENSE', deletedAt: null },
+                _sum: { amount: true }
+            })
+
+            const realBalance = (incomeSum._sum.amount || 0) - (expenseSum._sum.amount || 0)
+            await prisma.bank.update({
+                where: { id: bank.id },
+                data: { balance: realBalance }
+            })
+        }
+
+        revalidatePath('/financeiro')
+        revalidatePath('/dashboard')
+        return { success: true }
+    } catch (err: any) {
+        return { error: 'Erro ao recalcular saldos: ' + err.message }
     }
 }
 
@@ -596,9 +654,13 @@ export async function getCommissionsData() {
     })
 
     let usersList: any[] = []
+    let banksList: any[] = []
     if (isClientAdmin) {
       usersList = await prisma.user.findMany({
         select: { id: true, name: true, role: true }
+      })
+      banksList = await prisma.bank.findMany({
+        select: { id: true, name: true, balance: true }
       })
     }
 
@@ -606,10 +668,79 @@ export async function getCommissionsData() {
       success: true, 
       transactions: commissionTransactions, 
       users: usersList, 
+      banks: banksList,
       role: session.role,
       currentUserId: session.userId
     }
   } catch (err: any) {
     return { error: 'Erro ao carregar dados de comissão: ' + err.message }
+  }
+}
+
+export async function payCommissionsBatch(data: {
+  transactionIds: string[];
+  bankId: string;
+  payDate?: Date | string;
+}) {
+  const session = await getSession()
+  if (!session || session.role !== 'ADMIN') return { error: 'Não autorizado' }
+  if (!data.transactionIds || data.transactionIds.length === 0) return { error: 'Nenhum repasse selecionado' }
+  if (!data.bankId) return { error: 'Conta bancária de origem é obrigatória' }
+
+  try {
+    const paymentDate = data.payDate ? new Date(data.payDate) : new Date()
+
+    await prisma.$transaction(async (tx) => {
+      const bank = await tx.bank.findUnique({ where: { id: data.bankId } })
+      if (!bank) throw new Error('Conta bancária selecionada não existe')
+
+      // 1. Fetch pending commission transactions
+      const transactions = await tx.transaction.findMany({
+        where: {
+          id: { in: data.transactionIds },
+          status: 'PENDING',
+          type: 'EXPENSE',
+          deletedAt: null
+        }
+      })
+
+      if (transactions.length === 0) {
+        throw new Error('Nenhum repasse pendente válido foi encontrado para liquidação')
+      }
+
+      const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0)
+
+      // 2. Mark all as PAID
+      for (const t of transactions) {
+        await tx.transaction.update({
+          where: { id: t.id },
+          data: {
+            status: 'PAID',
+            payDate: paymentDate,
+            bankId: data.bankId
+          }
+        })
+      }
+
+      // 3. Deduct total amount from bank balance
+      await tx.bank.update({
+        where: { id: data.bankId },
+        data: { balance: { decrement: totalAmount } }
+      })
+    })
+
+    await createAuditLog(
+      session.userId, 
+      'BATCH_PAY_COMMISSIONS', 
+      'Transaction', 
+      { count: data.transactionIds.length, bankId: data.bankId }
+    )
+
+    revalidatePath('/comissoes')
+    revalidatePath('/financeiro')
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    return { error: err.message || 'Erro ao liquidar repasses em lote' }
   }
 }
