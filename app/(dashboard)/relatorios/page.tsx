@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import styles from './relatorios.module.css'
-import { getSalesReport, getInventoryReport, getFinancialReport, getAppointmentsReport } from '@/app/actions/reportActions'
+import { getSalesReport, getInventoryReport, getFinancialReport, getAppointmentsReport, getShippingReport } from '@/app/actions/reportActions'
 import { getSettings } from '@/app/actions/settingsActions'
 import { deleteSale } from '@/app/actions/saleActions'
 import { Card } from '@/components/ui/Card'
@@ -98,7 +98,7 @@ export default function RelatoriosPage() {
     })
   }
 
-  const isColVisible = (colId: string) => visibleColumns[activeTab].includes(colId)
+  const isColVisible = (colId: string) => visibleColumns[activeTab]?.includes(colId)
 
   // Deletion state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -135,10 +135,7 @@ export default function RelatoriosPage() {
     else if (activeTab === 'inventory') res = await getInventoryReport()
     else if (activeTab === 'financial') res = await getFinancialReport(startDate, endDate)
     else if (activeTab === 'appointments') res = await getAppointmentsReport(startDate, endDate)
-    else if (activeTab === 'shipping') {
-      const { getShippingReport } = await import('@/app/actions/reportActions')
-      res = await getShippingReport(startDate, endDate)
-    }
+    else if (activeTab === 'shipping') res = await getShippingReport(startDate, endDate)
 
     if (res?.success) {
       if (activeTab === 'sales' || activeTab === 'deleted_sales') setData(res.sales)
@@ -268,12 +265,14 @@ export default function RelatoriosPage() {
 
   // Summary KPIs based on active tab
   const getTabKPIs = () => {
+    if (!Array.isArray(data)) return []
+
     if (activeTab === 'sales') {
-      const activeSales = data.filter(s => (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt)
-      const totalRevenue = activeSales.reduce((acc, s) => acc + (Number(s.totalAmount) || 0), 0)
+      const activeSales = data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt)
+      const totalRevenue = activeSales.reduce((acc, s) => acc + (Number(s?.totalAmount) || 0), 0)
       const totalCommission = activeSales.reduce((acc, s) => {
-        const comm = s.user?.commissionPercent !== null && s.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
-        return acc + (Number(s.totalAmount) || 0) * (comm / 100)
+        const comm = s?.user?.commissionPercent !== null && s?.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
+        return acc + (Number(s?.totalAmount) || 0) * (comm / 100)
       }, 0)
       const count = activeSales.length
       const ticketMedio = count > 0 ? totalRevenue / count : 0
@@ -284,19 +283,35 @@ export default function RelatoriosPage() {
         { label: isAdmin ? 'Total de Comissões' : 'Minha Comissão', value: formatCurrency(totalCommission), sub: 'A repassar/receber', icon: '💼', colorClass: styles.valCommission }
       ]
     }
+    if (activeTab === 'deleted_sales') {
+      const deletedSales = data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !!s.deletedAt)
+      const totalVoided = deletedSales.reduce((acc, s) => acc + (Number(s?.totalAmount) || 0), 0)
+      return [
+        { label: 'Vendas Excluídas', value: deletedSales.length.toString(), sub: 'Cancelamentos/Estornos', icon: '🗑️', colorClass: styles.valNegative },
+        { label: 'Total Estornado', value: formatCurrency(totalVoided), sub: 'Impacto financeiro', icon: '💸', colorClass: styles.valNegative }
+      ]
+    }
+    if (activeTab === 'shipping') {
+      const totalShipments = data.length
+      const withDocs = data.filter(s => s && s.nfGenerated && s.labelGenerated).length
+      return [
+        { label: 'Envios Finalizados', value: totalShipments.toString(), sub: 'Despachos no período', icon: '📦', colorClass: styles.valPrimary },
+        { label: 'Doc. Completa (NF + Etiqueta)', value: withDocs.toString(), sub: 'Etiqueta e NF geradas', icon: '✅', colorClass: styles.valPositive }
+      ]
+    }
     if (activeTab === 'financial' && dre) {
       return [
-        { label: 'Receita Bruta', value: formatCurrency(dre.grossRevenue), sub: 'Entradas operacionais', icon: '💵', colorClass: styles.valPositive },
-        { label: 'CMV (Custos)', value: formatCurrency(dre.cmv), sub: 'Custo de mercadorias', icon: '📉', colorClass: styles.valNegative },
-        { label: 'Despesas Fixas', value: formatCurrency(dre.operationalCost), sub: 'Custos e repasses', icon: '💳', colorClass: styles.valNegative },
-        { label: 'Lucro Líquido Real', value: formatCurrency(dre.netProfit), sub: `Margem: ${dre.grossRevenue > 0 ? ((dre.netProfit / dre.grossRevenue) * 100).toFixed(1) : 0}%`, icon: '💎', colorClass: dre.netProfit >= 0 ? styles.valPositive : styles.valNegative }
+        { label: 'Receita Bruta', value: formatCurrency(dre.grossRevenue || 0), sub: 'Entradas operacionais', icon: '💵', colorClass: styles.valPositive },
+        { label: 'CMV (Custos)', value: formatCurrency(dre.cmv || 0), sub: 'Custo de mercadorias', icon: '📉', colorClass: styles.valNegative },
+        { label: 'Despesas Fixas', value: formatCurrency(dre.operationalCost || 0), sub: 'Custos e repasses', icon: '💳', colorClass: styles.valNegative },
+        { label: 'Lucro Líquido Real', value: formatCurrency(dre.netProfit || 0), sub: `Margem: ${dre.grossRevenue > 0 ? (((dre.netProfit || 0) / dre.grossRevenue) * 100).toFixed(1) : 0}%`, icon: '💎', colorClass: (dre.netProfit || 0) >= 0 ? styles.valPositive : styles.valNegative }
       ]
     }
     if (activeTab === 'inventory') {
       const totalItems = data.length
-      const lowStockCount = data.filter(p => p.stock <= 5).length
-      const totalStockVal = data.reduce((acc, p) => acc + ((Number(p.cost) || 0) * (Number(p.stock) || 0)), 0)
-      const totalSellVal = data.reduce((acc, p) => acc + ((Number(p.price) || 0) * (Number(p.stock) || 0)), 0)
+      const lowStockCount = data.filter(p => p && p.stock <= 5).length
+      const totalStockVal = data.reduce((acc, p) => acc + ((Number(p?.cost) || 0) * (Number(p?.stock) || 0)), 0)
+      const totalSellVal = data.reduce((acc, p) => acc + ((Number(p?.price) || 0) * (Number(p?.stock) || 0)), 0)
       return [
         { label: 'Produtos Cadastrados', value: totalItems.toString(), sub: 'Itens em catálogo', icon: '📦', colorClass: styles.valPrimary },
         { label: 'Valor em Estoque (Custo)', value: formatCurrency(totalStockVal), sub: 'Patrimônio estocado', icon: '🏭', colorClass: styles.valGold },
@@ -306,8 +321,8 @@ export default function RelatoriosPage() {
     }
     if (activeTab === 'appointments') {
       const totalAppts = data.length
-      const completed = data.filter(a => a.status === 'COMPLETED').length
-      const returns = data.filter(a => a.isReturn).length
+      const completed = data.filter(a => a && a.status === 'COMPLETED').length
+      const returns = data.filter(a => a && a.isReturn).length
       return [
         { label: 'Total Agendamentos', value: totalAppts.toString(), sub: 'Consultas no período', icon: '📅', colorClass: styles.valPrimary },
         { label: 'Consultas Concluídas', value: completed.toString(), sub: 'Atendimentos realizados', icon: '✅', colorClass: styles.valPositive },
@@ -462,7 +477,7 @@ export default function RelatoriosPage() {
                 onChange={(e) => setSellerFilter(e.target.value)}
               >
                 <option value="">Todos os vendedores</option>
-                {Array.from(new Set(data.map(s => s.user?.name).filter(Boolean))).map((name: any) => (
+                {Array.from(new Set((data || []).map(s => s?.user?.name).filter(Boolean))).map((name: any) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
@@ -495,7 +510,7 @@ export default function RelatoriosPage() {
                   Exibir Colunas
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
-                  {columnsConfig[activeTab].map(col => (
+                  {columnsConfig[activeTab]?.map(col => (
                     <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
                       <input 
                         type="checkbox" 
@@ -588,9 +603,9 @@ export default function RelatoriosPage() {
                   <tr><td colSpan={visibleColumns.sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
                 ) : data.length === 0 ? (
                   <tr><td colSpan={visibleColumns.sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda encontrada.</td></tr>
-                ) : data.filter(s => (sellerFilter ? s.user.name === sellerFilter : true) && !s.deletedAt).map(s => {
-                  const comm = s.user.commissionPercent !== null ? s.user.commissionPercent : globalCommission
-                  const commVal = s.totalAmount * (comm / 100)
+                ) : data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt).map(s => {
+                  const comm = s.user?.commissionPercent !== null && s.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
+                  const commVal = (Number(s.totalAmount) || 0) * (comm / 100)
                   const isVoided = !!s.deletedAt
 
                   return (
@@ -603,7 +618,7 @@ export default function RelatoriosPage() {
                       )}
                       {isColVisible('items') && (
                         <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
-                          {s.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(', ')}
+                          {s.items ? s.items.map((i: any) => `${i.quantity}x ${i.product?.name || 'Item'}`).join(', ') : '---'}
                         </td>
                       )}
                       {isColVisible('seller') && isAdmin && <td>{s.user?.name || '---'} <span style={{ fontSize: '0.7em', color: '#888' }}>({comm}%)</span></td>}
@@ -633,10 +648,10 @@ export default function RelatoriosPage() {
                     <td style={{ color: 'var(--success)', fontSize: '1.05rem' }}>
                       {formatCurrency(
                         data
-                          .filter(s => (sellerFilter ? s.user.name === sellerFilter : true) && !s.deletedAt)
+                          .filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !s.deletedAt)
                           .reduce((acc, s) => {
-                            const comm = s.user.commissionPercent !== null ? s.user.commissionPercent : globalCommission
-                            return acc + s.totalAmount * (comm / 100)
+                            const comm = s.user?.commissionPercent !== null && s.user?.commissionPercent !== undefined ? s.user.commissionPercent : globalCommission
+                            return acc + (Number(s.totalAmount) || 0) * (comm / 100)
                           }, 0)
                       )}
                     </td>
@@ -662,9 +677,9 @@ export default function RelatoriosPage() {
               <tbody>
                 {loading ? (
                   <tr><td colSpan={visibleColumns.deleted_sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</td></tr>
-                ) : data.filter(s => (sellerFilter ? s.user.name === sellerFilter : true) && !!s.deletedAt).length === 0 ? (
+                ) : data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !!s.deletedAt).length === 0 ? (
                   <tr><td colSpan={visibleColumns.deleted_sales.length} style={{ textAlign: 'center', padding: '2rem' }}>Nenhuma venda excluída encontrada.</td></tr>
-                ) : data.filter(s => (sellerFilter ? s.user.name === sellerFilter : true) && !!s.deletedAt).map(s => (
+                ) : data.filter(s => s && (sellerFilter ? s.user?.name === sellerFilter : true) && !!s.deletedAt).map(s => (
                   <tr key={s.id} className={styles.voidedRow}>
                     {isColVisible('date') && <td>{new Date(s.createdAt).toLocaleDateString()}</td>}
                     {isColVisible('customer') && <td>{s.customer?.name || '---'}</td>}
