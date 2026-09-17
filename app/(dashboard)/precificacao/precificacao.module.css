@@ -1,132 +1,486 @@
+/* ═══════════════════════════════════════════════════════════════
+   DERMAE ERP — Calculadora de Precificação Inteligente
+   ═══════════════════════════════════════════════════════════════ */
+
 .container {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  max-width: 1200px;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.header h1 {
-  font-size: 2rem;
-  color: var(--gold-primary);
-  font-weight: 700;
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
+.headerTitle {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.headerTitle span {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.headerSubtitle {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+/* ── Main Grid ──────────────────────────────────────────────── */
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 2rem;
+  grid-template-columns: 1.1fr 1.3fr;
+  gap: 1.5rem;
+  align-items: start;
 }
 
 .column {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
+/* ── Left Side: Inputs Card ─────────────────────────────────── */
 .calcCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   padding: 1.5rem;
-  background: #fff;
+  box-shadow: var(--shadow-xs);
 }
 
 .sectionTitle {
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--foreground);
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--border-gold);
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.selectProductBox {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.selectLabel {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.45rem;
+}
+
+.selectInput {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.9rem;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.selectInput:focus {
+  border-color: var(--gold-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(197, 168, 92, 0.15);
 }
 
 .inputsGroup {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1.15rem;
 }
 
-.resultCard {
-  background: rgba(212, 175, 55, 0.05);
-  border: 1px solid var(--border-gold);
-  padding: 2rem;
+/* Margin Presets Buttons */
+.presetBox {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
+  gap: 0.4rem;
+  margin-top: -0.25rem;
+}
+
+.presetLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.presetBtn {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  padding: 0.45rem 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition);
+}
+
+.presetBtn:hover {
+  border-color: var(--gold-primary);
+  color: var(--gold-hover);
+  background: var(--gold-50);
+}
+
+.presetBtnActive {
+  background: var(--gold-100) !important;
+  color: var(--gold-hover) !important;
+  border-color: var(--gold-primary) !important;
+  font-weight: 800 !important;
+}
+
+/* ── Right Side: Results Card ───────────────────────────────── */
+.resultCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.resultCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gold-gradient);
+}
+
+.priceHeader {
   text-align: center;
 }
 
 .priceLabel {
-  font-size: 1rem;
-  color: #666;
-  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .priceValue {
-  font-size: 3rem;
+  font-size: 2.8rem;
   font-weight: 800;
-  color: var(--gold-primary);
+  letter-spacing: -0.02em;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0.25rem 0;
 }
 
+/* Product Comparison Banner */
+.comparisonBox {
+  background: var(--card-bg2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.compareItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.compareTitle {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.compareVal {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.diffPositive {
+  color: var(--success) !important;
+}
+
+.diffNegative {
+  color: var(--error) !important;
+}
+
+/* Visual Stacked Composition Bar */
+.visualBarWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.barHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stackedBar {
+  display: flex;
+  height: 20px;
+  width: 100%;
+  border-radius: 99px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.barSegment {
+  height: 100%;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.segCost { background: #3b82f6; }
+.segTax { background: #ef4444; }
+.segFixed { background: #f97316; }
+.segCommission { background: #8b5cf6; }
+.segProfit { background: #10b981; }
+
+.barLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Breakdown List */
 .breakdown {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: 0.45rem;
 }
 
 .breakdownItem {
   display: flex;
   justify-content: space-between;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--background);
-  font-size: 0.9rem;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  background: var(--card-bg2);
+  border-radius: var(--radius-xs);
+  font-size: 0.85rem;
 }
 
 .label {
-  color: #555;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .value {
   color: var(--foreground);
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.profitRow {
+  background: var(--success-bg) !important;
+  border: 1px solid rgba(30, 102, 65, 0.2);
+}
+
+.profitRow .label {
+  color: var(--success);
+  font-weight: 800;
+}
+
+.profitRow .value {
+  color: var(--success);
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+/* Break-even / Safety Box */
+.safetyBox {
+  background: linear-gradient(135deg, rgba(176, 92, 0, 0.08) 0%, rgba(176, 92, 0, 0.02) 100%);
+  border: 1px solid rgba(176, 92, 0, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.safetyText {
+  color: var(--warning);
+}
+
+.safetyPrice {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+/* Badges */
+.sustainabilityBadge {
+  padding: 0.6rem 1rem;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.sustainable {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid rgba(30, 102, 65, 0.3);
+}
+
+.notSustainable {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid rgba(165, 24, 62, 0.3);
 }
 
 .errorBox {
   padding: 1rem;
-  background: rgba(244, 67, 54, 0.1);
-  border: 1px solid #f44336;
-  border-radius: 8px;
-  color: #f44336;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+  color: var(--error);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
-.sustainabilityBadge {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 0.85rem;
-  margin-top: 1rem;
+/* Apply button */
+.applyBtn {
+  background: var(--gold-gradient);
+  color: var(--text-on-gold);
+  border: none;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-gold);
+  transition: all var(--transition);
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
 }
 
-.sustainable {
-  background: rgba(76, 175, 80, 0.1);
-  color: #2e7d32;
-  border: 1px solid #2e7d32;
+.applyBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-gold-lg);
+  filter: brightness(1.04);
 }
 
-.notSustainable {
-  background: rgba(211, 47, 47, 0.1);
-  color: #d32f2f;
-  border: 1px solid #d32f2f;
+.applyBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-@media (max-width: 900px) {
+/* ── Educational Card ────────────────────────────────────────── */
+.infoCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.infoCardTitle {
+  color: var(--gold-hover);
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.infoCardText {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 960px) {
   .grid {
     grid-template-columns: 1fr;
   }
-  
-  .priceValue {
-    font-size: 2.2rem;
+
+  .comparisonBox {
+    grid-template-columns: 1fr;
+  }
+
+  .presetGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
