@@ -1,14 +1,22 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import styles from './financeiro.module.css'
-import { getFinancialFlow, createManualTransaction, upsertBank, updateTransaction, deleteTransaction, getCashFlowForecast } from '@/app/actions/financialActions'
+import { 
+  getFinancialFlow, 
+  createManualTransaction, 
+  upsertBank, 
+  updateTransaction, 
+  deleteTransaction, 
+  getCashFlowForecast 
+} from '@/app/actions/financialActions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatCurrency } from '@/lib/format'
 import { parseBankStatement, bulkImportTransactions } from '@/app/actions/bankImportActions'
 import { getAuditLogs } from '@/app/actions/auditActions'
+import Link from 'next/link'
 
 export default function FinanceiroPage() {
   const [data, setData] = useState<any>(null)
@@ -21,6 +29,10 @@ export default function FinanceiroPage() {
   const [forecastData, setForecastData] = useState<any[]>([])
   const [forecastBase, setForecastBase] = useState(0)
   const [forecastLoading, setForecastLoading] = useState(false)
+
+  // Search & Type Filter State
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE' | 'PENDING'>('ALL')
 
   // Transaction Form State
   const [txForm, setTxForm] = useState({
@@ -58,7 +70,7 @@ export default function FinanceiroPage() {
     load(startDate, endDate)
   }, [startDate, endDate])
 
-  // initial load (no filter)
+  // Initial load
   useEffect(() => { load('', '') }, [])
 
   async function load(start?: string, end?: string) {
@@ -86,7 +98,6 @@ export default function FinanceiroPage() {
     setLoading(false)
   }
 
-
   const handleBankSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const res = await upsertBank({
@@ -95,7 +106,7 @@ export default function FinanceiroPage() {
     })
     if (res.success) {
       setIsBankModalOpen(false)
-      load()
+      load(startDate, endDate)
     } else {
       alert(res.error)
     }
@@ -124,7 +135,7 @@ export default function FinanceiroPage() {
     if (res.success) {
       setIsDeleteModalOpen(false)
       setJustification('')
-      load()
+      load(startDate, endDate)
     } else {
       alert(res.error)
     }
@@ -151,7 +162,7 @@ export default function FinanceiroPage() {
       setIsTxModalOpen(false)
       setSelectedTx(null)
       setJustification('')
-      load()
+      load(startDate, endDate)
     } else {
       alert(res.error)
     }
@@ -161,7 +172,7 @@ export default function FinanceiroPage() {
     const file = e.target.files?.[0]
     if (!file) return
     
-    const bankIdToUse = importBankId || data.banks[0]?.id
+    const bankIdToUse = importBankId || data?.banks?.[0]?.id
     if (!bankIdToUse) return alert('Por favor, selecione uma conta bancária primeiro.')
 
     const formData = new FormData()
@@ -177,246 +188,430 @@ export default function FinanceiroPage() {
     }
   }
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Carregando dados financeiros...</div>
+  // Consolidated Financial Metrics (KPIs)
+  const totalConsolidatedBalance = useMemo(() => {
+    if (!data?.banks) return 0
+    return data.banks.reduce((acc: number, b: any) => acc + (b.balance || 0), 0)
+  }, [data?.banks])
 
-  const { transactions, banks } = data
+  const periodMetrics = useMemo(() => {
+    if (!data?.transactions) return { income: 0, expense: 0, net: 0, count: 0 }
+    let income = 0
+    let expense = 0
+    data.transactions.forEach((t: any) => {
+      if (t.type === 'INCOME') income += t.amount
+      if (t.type === 'EXPENSE') expense += t.amount
+    })
+    return {
+      income,
+      expense,
+      net: income - expense,
+      count: data.transactions.length
+    }
+  }, [data?.transactions])
+
+  // Filtered Transactions
+  const filteredTransactions = useMemo(() => {
+    if (!data?.transactions) return []
+    return data.transactions.filter((t: any) => {
+      // Type filter
+      if (typeFilter === 'INCOME' && t.type !== 'INCOME') return false
+      if (typeFilter === 'EXPENSE' && t.type !== 'EXPENSE') return false
+      if (typeFilter === 'PENDING' && t.status !== 'PENDING') return false
+
+      // Search term
+      if (searchTerm.trim() !== '') {
+        const term = searchTerm.toLowerCase()
+        const descMatch = t.description?.toLowerCase().includes(term)
+        const bankMatch = t.bank?.name?.toLowerCase().includes(term)
+        return descMatch || bankMatch
+      }
+
+      return true
+    })
+  }, [data?.transactions, typeFilter, searchTerm])
+
+  if (loading && !data) {
+    return (
+      <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>💰</div>
+        <p style={{ fontWeight: 600 }}>Carregando dados financeiros...</p>
+      </div>
+    )
+  }
+
+  const { banks = [] } = data || {}
 
   return (
     <div className={styles.container}>
+      {/* ── Top Header ────────────────────────────────────────── */}
       <header className={styles.formHeader}>
-        <h1>💰 Gestão Financeira</h1>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <Button variant="secondary" onClick={async () => {
-            const res = await getAuditLogs()
-            if (res.success) {
-              setAuditLogs(res.logs)
-              setIsLogModalOpen(true)
-            }
-          }}>📜 Ver Histórico</Button>
+        <div>
+          <h1 className={styles.headerTitle}>
+            <span>💰 Gestão Financeira & Caixa</span>
+          </h1>
+          <p className={styles.headerSubtitle}>
+            Controle de fluxo de caixa realizado, contas bancárias, conciliação e projeção de liquidez.
+          </p>
+        </div>
+
+        <div className={styles.headerActions}>
+          <Link href="/financeiro/contas-receber">
+            <Button variant="secondary" style={{ fontSize: '0.82rem' }}>
+              📥 Contas a Receber
+            </Button>
+          </Link>
+
+          <Button 
+            variant="secondary" 
+            style={{ fontSize: '0.82rem' }}
+            onClick={async () => {
+              const res = await getAuditLogs()
+              if (res.success) {
+                setAuditLogs(res.logs)
+                setIsLogModalOpen(true)
+              }
+            }}
+          >
+            📜 Auditoria
+          </Button>
+
           {banks.length > 0 && (
             <select
               value={importBankId}
               onChange={(e) => setImportBankId(e.target.value)}
               className={styles.select}
-              style={{ width: 'auto', padding: '0.5rem 1rem', border: '1px solid var(--border-gold)', borderRadius: '8px', fontSize: '0.9rem', cursor: 'pointer' }}
+              style={{ width: 'auto', padding: '0.5rem 0.8rem', fontSize: '0.82rem' }}
             >
               {banks.map((b: any) => (
                 <option key={b.id} value={b.id}>Extrato: {b.name}</option>
               ))}
             </select>
           )}
-          <label className={`${styles.actionBtn} ${styles.importBtn}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>
-            📥 Importar Extrato
+
+          <label className={styles.actionBtn} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.9rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
+            📥 Importar Extrato (.OFX/.CSV)
             <input type="file" hidden accept=".ofx,.csv" onChange={handleImportFile} />
           </label>
-          <Button variant="secondary" onClick={() => { setIsBankModalOpen(true); setBankForm({ name: '', balance: '' }); }}>+ Novo Banco</Button>
-          <Button onClick={() => { setIsTxModalOpen(true); setSelectedTx(null); setTxForm({ bankId: banks[0]?.id || '', type: 'EXPENSE', amount: '', description: '', status: 'PAID' }); }}>+ Nova Transação</Button>
+
+          <Button 
+            variant="secondary" 
+            style={{ fontSize: '0.82rem' }}
+            onClick={() => { setIsBankModalOpen(true); setBankForm({ name: '', balance: '' }); }}
+          >
+            + Conta
+          </Button>
+
+          <Button 
+            style={{ fontSize: '0.82rem' }}
+            onClick={() => { 
+              setIsTxModalOpen(true); 
+              setSelectedTx(null); 
+              setTxForm({ bankId: banks[0]?.id || '', type: 'EXPENSE', amount: '', description: '', status: 'PAID' }); 
+            }}
+          >
+            + Nova Transação
+          </Button>
         </div>
       </header>
 
+      {/* ── Executive KPI Summary Cards ───────────────────────── */}
+      <div className={styles.kpiGrid}>
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Saldo Total Consolidado</span>
+            <span className={styles.kpiIcon}>🏦</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valGold}`}>
+            {formatCurrency(totalConsolidatedBalance)}
+          </div>
+          <span className={styles.kpiSub}>Disponível em {banks.length} contas bancárias</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Entradas no Período</span>
+            <span className={styles.kpiIcon}>📈</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valIncome}`}>
+            + {formatCurrency(periodMetrics.income)}
+          </div>
+          <span className={styles.kpiSub}>Receitas e faturamentos confirmados</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Saídas no Período</span>
+            <span className={styles.kpiIcon}>📉</span>
+          </div>
+          <div className={`${styles.kpiValue} ${styles.valExpense}`}>
+            - {formatCurrency(periodMetrics.expense)}
+          </div>
+          <span className={styles.kpiSub}>Despesas operacionais e custos pagos</span>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiTitle}>Resultado Operacional</span>
+            <span className={styles.kpiIcon}>⚖️</span>
+          </div>
+          <div className={`${styles.kpiValue} ${periodMetrics.net >= 0 ? styles.valIncome : styles.valExpense}`}>
+            {periodMetrics.net >= 0 ? '+' : ''} {formatCurrency(periodMetrics.net)}
+          </div>
+          <span className={styles.kpiSub}>
+            {periodMetrics.net >= 0 ? 'Superávit no período filtrado' : 'Déficit no período filtrado'}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Main 2-Column Grid Layout ─────────────────────────── */}
       <div className={styles.grid}>
-        {/* Lado Esquerdo: Bancos */}
+        
+        {/* ── Left Column: Contas Bancárias ───────────────────── */}
         <div className={styles.column}>
-          <h2 className={styles.sectionTitle}>Minhas Contas</h2>
+          <div className={styles.consolidatedCard}>
+            <span className={styles.consolidatedLabel}>Patrimônio Líquido em Caixa</span>
+            <span className={styles.consolidatedValue}>{formatCurrency(totalConsolidatedBalance)}</span>
+          </div>
+
+          <h2 className={styles.sectionTitle}>
+            <span>Minhas Contas</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{banks.length} ativas</span>
+          </h2>
+
           {banks.map((bank: any) => (
-            <Card key={bank.id} className={styles.bankCard}>
+            <div key={bank.id} className={styles.bankCard}>
               <div className={styles.bankInfo}>
                 <span className={styles.bankName}>🏦 {bank.name}</span>
                 <span className={styles.bankBalance}>{formatCurrency(bank.balance)}</span>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                {bank._count.transactions} transações registradas
+              <div className={styles.bankCount}>
+                {bank._count?.transactions || 0} lançamentos registrados
               </div>
-            </Card>
+            </div>
           ))}
+
+          {banks.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              Nenhuma conta cadastrada. Clique em "+ Conta" acima.
+            </div>
+          )}
         </div>
 
-        {/* Lado Direito: Fluxo de Caixa Realizado ou Projetado */}
+        {/* ── Right Column: Fluxo de Caixa / Projeção ─────────── */}
         <div className={styles.column}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.6rem', flexWrap: 'wrap', gap: '0.8rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          
+          {/* Header com Alternância de Abas */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.6rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--foreground)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {financeTab === 'realized'
                 ? (startDate && endDate
-                    ? `📊 Transações: ${startDate.split('-').reverse().join('/')} → ${endDate.split('-').reverse().join('/')}`
-                    : '📊 Histórico Realizado (Últimas 50)')
+                    ? `📊 Extrato: ${startDate.split('-').reverse().join('/')} → ${endDate.split('-').reverse().join('/')}`
+                    : '📊 Histórico de Transações')
                 : '🔮 Projeção de Fluxo de Caixa (12 Meses)'}
             </h2>
-            <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(212,175,55,0.03)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--border-gold)' }}>
+
+            <div style={{ display: 'flex', gap: '0.3rem', background: 'var(--background)', padding: '0.25rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
               <button 
+                type="button"
                 onClick={() => setFinanceTab('realized')} 
-                style={{ 
-                  background: financeTab === 'realized' ? 'var(--gold-primary)' : 'transparent',
-                  color: financeTab === 'realized' ? '#000' : 'var(--text-secondary)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0.4rem 0.8rem',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
+                className={`${styles.presetBtn} ${financeTab === 'realized' ? styles.presetBtnActive : ''}`}
               >
                 Caixa Realizado
               </button>
               <button 
+                type="button"
                 onClick={() => setFinanceTab('forecast')} 
-                style={{ 
-                  background: financeTab === 'forecast' ? 'var(--gold-primary)' : 'transparent',
-                  color: financeTab === 'forecast' ? '#000' : 'var(--text-secondary)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0.4rem 0.8rem',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
+                className={`${styles.presetBtn} ${financeTab === 'forecast' ? styles.presetBtnActive : ''}`}
               >
-                Projeção Futura
+                Projeção Futura (12M)
               </button>
             </div>
           </div>
 
           {financeTab === 'realized' ? (
-            <div>
-              {/* ── Date Range Filter ── */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'flex-end',
-                gap: '0.75rem',
-                flexWrap: 'wrap',
-                padding: '1rem 1.25rem',
-                background: 'var(--gold-50)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: '1.25rem'
-              }}>
-                {/* Date Início */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>Data Início</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    max={endDate || todayStr}
-                    onChange={(e) => { setStartDate(e.target.value); if (!endDate) setEndDate(todayStr) }}
-                    style={{ padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: '#fff', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                  />
-                </div>
-
-                <span style={{ color: 'var(--text-muted)', fontSize: '1rem', paddingBottom: '0.5rem' }}>→</span>
-
-                {/* Date Fim */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>Data Fim</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    min={startDate}
-                    max={todayStr}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    style={{ padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: '#fff', color: 'var(--text-primary)', fontSize: '0.88rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                  />
-                </div>
-
-                {/* Presets */}
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', paddingBottom: '0.1rem' }}>
-                  {[
-                    { label: 'Hoje',     fn: () => { setStartDate(todayStr); setEndDate(todayStr) } },
-                    { label: '7 dias',   fn: () => { const d = new Date(today); d.setDate(d.getDate()-6); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
-                    { label: '30 dias',  fn: () => { const d = new Date(today); d.setDate(d.getDate()-29); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
-                    { label: 'Este mês', fn: () => { const d = new Date(today.getFullYear(), today.getMonth(), 1); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
-                    { label: 'Tudo',     fn: () => { setStartDate(''); setEndDate('') } },
-                  ].map(({ label, fn }) => (
-                    <button
-                      key={label}
-                      onClick={fn}
-                      style={{
-                        padding: '0.45rem 0.85rem',
-                        background: (
-                          (label === 'Tudo' && !startDate && !endDate) ||
-                          (label === 'Hoje' && startDate === todayStr && endDate === todayStr)
-                        ) ? 'var(--gold-gradient)' : 'rgba(255,255,255,0.85)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-xs)',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        color: (
-                          (label === 'Tudo' && !startDate && !endDate) ||
-                          (label === 'Hoje' && startDate === todayStr && endDate === todayStr)
-                        ) ? '#fff' : 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                        transition: 'all 0.2s ease',
-                        textShadow: 'none',
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Counter */}
-                {(startDate || endDate) && (
-                  <div style={{ marginLeft: 'auto', fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem', paddingBottom: '0.2rem' }}>
-                    <span style={{ fontWeight: 800, fontSize: '1.1rem', background: 'var(--gold-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                      {transactions.length}
-                    </span>
-                    {transactions.length === 1 ? 'transação encontrada' : 'transações encontradas'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              {/* ── Filter Bar: Datas, Presets & Busca ── */}
+              <div className={styles.filterBarWrapper}>
+                
+                {/* Linha 1: Datepicker + Presets de Período */}
+                <div className={styles.dateFilterRow}>
+                  <div className={styles.filterField}>
+                    <label className={styles.filterLabel}>Data Início</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      max={endDate || todayStr}
+                      onChange={(e) => { setStartDate(e.target.value); if (!endDate) setEndDate(todayStr) }}
+                      className={styles.dateInput}
+                    />
                   </div>
-                )}
+
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', paddingBottom: '0.5rem' }}>→</span>
+
+                  <div className={styles.filterField}>
+                    <label className={styles.filterLabel}>Data Fim</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      min={startDate}
+                      max={todayStr}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className={styles.dateInput}
+                    />
+                  </div>
+
+                  {/* Botões de Atalho */}
+                  <div className={styles.presetGroup} style={{ paddingBottom: '0.1rem' }}>
+                    {[
+                      { label: 'Hoje', fn: () => { setStartDate(todayStr); setEndDate(todayStr) } },
+                      { label: '7 dias', fn: () => { const d = new Date(today); d.setDate(d.getDate()-6); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
+                      { label: '30 dias', fn: () => { const d = new Date(today); d.setDate(d.getDate()-29); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
+                      { label: 'Este mês', fn: () => { const d = new Date(today.getFullYear(), today.getMonth(), 1); setStartDate(d.toISOString().split('T')[0]); setEndDate(todayStr) } },
+                      { label: 'Tudo', fn: () => { setStartDate(''); setEndDate('') } },
+                    ].map(({ label, fn }) => {
+                      const isActive = (label === 'Tudo' && !startDate && !endDate) ||
+                                       (label === 'Hoje' && startDate === todayStr && endDate === todayStr)
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={fn}
+                          className={`${styles.presetBtn} ${isActive ? styles.presetBtnActive : ''}`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Linha 2: Busca Rápida + Filtro por Tipo */}
+                <div className={styles.searchFilterRow}>
+                  <div className={styles.searchBox}>
+                    <span className={styles.searchIcon}>🔍</span>
+                    <input 
+                      type="text"
+                      placeholder="Filtrar por descrição, conta ou detalhe..."
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                      className={styles.searchInput}
+                    />
+                  </div>
+
+                  <div className={styles.typeFilterGroup}>
+                    <button
+                      type="button"
+                      className={`${styles.typeBtn} ${typeFilter === 'ALL' ? styles.typeBtnActive : ''}`}
+                      onClick={() => setTypeFilter('ALL')}
+                    >
+                      Todas ({filteredTransactions.length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.typeBtn} ${typeFilter === 'INCOME' ? styles.typeBtnActive : ''}`}
+                      onClick={() => setTypeFilter('INCOME')}
+                    >
+                      🟢 Receitas
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.typeBtn} ${typeFilter === 'EXPENSE' ? styles.typeBtnActive : ''}`}
+                      onClick={() => setTypeFilter('EXPENSE')}
+                    >
+                      🔴 Despesas
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.typeBtn} ${typeFilter === 'PENDING' ? styles.typeBtnActive : ''}`}
+                      onClick={() => setTypeFilter('PENDING')}
+                    >
+                      🟡 Pendentes
+                    </button>
+                  </div>
+                </div>
               </div>
 
+              {/* Tabela de Transações */}
               <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Descrição</th>
-                    <th>Banco</th>
-                    <th>Valor</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'center' }}>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign: 'center' }}>Nenhuma transação encontrada.</td></tr>
-                  ) : transactions.map((t: any) => (
-                    <tr key={t.id} className={t.type === 'EXPENSE' ? styles.expenseRow : ''}>
-                      <td style={{ whiteSpace: 'nowrap' }}>{new Date(t.createdAt).toLocaleDateString()}</td>
-                      <td>{t.description}</td>
-                      <td>{t.bank.name}</td>
-                      <td className={t.type === 'INCOME' ? styles.income : styles.expense} style={{ whiteSpace: 'nowrap' }}>
-                        {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
-                      </td>
-                      <td>
-                        <span className={t.status === 'PAID' ? styles.statusPaid : styles.statusPending}>
-                          {t.status === 'PAID' ? '● PAGO' : '○ PENDENTE'}
-                        </span>
-                      </td>
-                      <td className={styles.actionsCell}>
-                        <button className={`${styles.actionBtn} ${styles.editBtn}`} title="Editar" onClick={() => handleEditClick(t)}>✏️</button>
-                        <button className={`${styles.actionBtn} ${styles.deleteBtn}`} title="Excluir" onClick={() => handleDeleteClick(t)}>🗑️</button>
-                      </td>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Descrição</th>
+                      <th>Conta / Banco</th>
+                      <th>Valor</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'center' }}>Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredTransactions.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                          <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>🔍</div>
+                          Nenhuma transação encontrada para os filtros selecionados.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTransactions.map((t: any) => (
+                        <tr key={t.id}>
+                          <td style={{ whiteSpace: 'nowrap', fontSize: '0.84rem' }}>
+                            {new Date(t.createdAt).toLocaleDateString('pt-BR')}
+                          </td>
+                          <td>
+                            <strong style={{ color: 'var(--foreground)' }}>{t.description}</strong>
+                          </td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{t.bank?.name}</td>
+                          <td className={t.type === 'INCOME' ? styles.income : styles.expense} style={{ whiteSpace: 'nowrap' }}>
+                            {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
+                          </td>
+                          <td>
+                            <span className={t.status === 'PAID' ? styles.statusPaid : styles.statusPending}>
+                              {t.status === 'PAID' ? '● PAGO' : '○ PENDENTE'}
+                            </span>
+                          </td>
+                          <td className={styles.actionsCell}>
+                            <button 
+                              className={styles.actionBtn} 
+                              title="Editar transação" 
+                              onClick={() => handleEditClick(t)}
+                            >
+                              ✏️
+                            </button>
+                            <button 
+                              className={`${styles.actionBtn} ${styles.deleteBtn}`} 
+                              title="Excluir com auditoria" 
+                              onClick={() => handleDeleteClick(t)}
+                            >
+                              🗑️
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           ) : (
+            /* ── Projeção Futura (12 Meses) ── */
             <div className={styles.tableWrapper}>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 1rem 0', lineHeight: '1.4' }}>
-                Projeta a liquidez futura da clínica nos próximos 12 meses. Combina o saldo bancário consolidado atual (base: <strong>{formatCurrency(forecastBase)}</strong>) com parcelas a receber de cartões e despesas recorrentes/repasses provisionados a vencer.
-              </p>
+              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', background: 'var(--gold-50)' }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
+                  🔮 Projeta a liquidez financeira da clínica nos próximos 12 meses combinando o saldo consolidado atual (base: <strong>{formatCurrency(forecastBase)}</strong>) com faturamentos parcelados de cartões e despesas recorrentes provisionadas.
+                </p>
+              </div>
+
               <table className={styles.table}>
                 <thead>
-                  <tr style={{ background: 'rgba(212,175,55,0.06)', borderBottom: '1px solid var(--border-color)' }}>
-                    <th style={{ padding: '0.8rem' }}>Mês de Referência</th>
-                    <th style={{ padding: '0.8rem' }}>Receitas Previstas</th>
-                    <th style={{ padding: '0.8rem' }}>Saídas Previstas</th>
-                    <th style={{ padding: '0.8rem' }}>Fluxo Líquido</th>
-                    <th style={{ padding: '0.8rem' }}>Saldo Final Projetado</th>
+                  <tr>
+                    <th>Mês de Referência</th>
+                    <th>Receitas Previstas</th>
+                    <th>Saídas Previstas</th>
+                    <th>Fluxo Líquido</th>
+                    <th>Saldo Projetado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -437,23 +632,20 @@ export default function FinanceiroPage() {
                       const netFlowIsPositive = row.netFlow >= 0
                       const balanceIsPositive = row.projectedBalance >= 0
                       return (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }}>
-                          <td style={{ fontWeight: 'bold', textTransform: 'capitalize', padding: '0.8rem' }}>{row.monthName}</td>
-                          <td style={{ color: 'var(--success)', fontWeight: '600', padding: '0.8rem' }}>+ {formatCurrency(row.income)}</td>
-                          <td style={{ color: 'var(--error)', fontWeight: '600', padding: '0.8rem' }}>- {formatCurrency(row.expense)}</td>
+                        <tr key={idx}>
+                          <td style={{ fontWeight: 'bold', textTransform: 'capitalize' }}>{row.monthName}</td>
+                          <td style={{ color: 'var(--success)', fontWeight: 600 }}>+ {formatCurrency(row.income)}</td>
+                          <td style={{ color: 'var(--error)', fontWeight: 600 }}>- {formatCurrency(row.expense)}</td>
                           <td style={{ 
                             color: netFlowIsPositive ? 'var(--success)' : 'var(--error)', 
-                            fontWeight: 'bold',
-                            padding: '0.8rem'
+                            fontWeight: 700
                           }}>
                             {netFlowIsPositive ? '+' : '-'} {formatCurrency(Math.abs(row.netFlow))}
                           </td>
                           <td style={{ 
-                            color: balanceIsPositive ? 'var(--gold-primary)' : 'var(--error)', 
-                            fontWeight: 'bold',
-                            fontSize: '0.95rem',
-                            padding: '0.8rem',
-                            background: balanceIsPositive ? 'rgba(212,175,55,0.03)' : 'rgba(244,67,54,0.03)'
+                            color: balanceIsPositive ? 'var(--gold-hover)' : 'var(--error)', 
+                            fontWeight: 800,
+                            fontSize: '0.95rem'
                           }}>
                             {formatCurrency(row.projectedBalance)}
                           </td>
@@ -468,301 +660,331 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
-      {/* Modais */}
+      {/* ── Modais ────────────────────────────────────────────── */}
+      
+      {/* Modal de Transação (Nova / Editar) */}
       {isTxModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
-            <Card>
-              <div className={styles.modalContent}>
-                <h2>{selectedTx ? 'Editar Transação' : 'Nova Transação'}</h2>
-                <form onSubmit={handleSubmitTx} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <label style={{ fontSize: '0.85rem', color: '#ccc' }}>Tipo</label>
-                    <select 
-                      className={styles.select}
-                      value={txForm.type}
-                      onChange={(e) => setTxForm({...txForm, type: e.target.value})}
-                    >
-                      <option value="INCOME">Receita (+)</option>
-                      <option value="EXPENSE">Despesa (-)</option>
-                    </select>
+            <div className={styles.modalContent}>
+              <h2 className={styles.modalTitle}>{selectedTx ? 'Editar Transação' : 'Nova Transação'}</h2>
+              
+              <form onSubmit={handleSubmitTx} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label className={styles.modalLabel}>Tipo de Transação</label>
+                  <select 
+                    className={styles.select}
+                    value={txForm.type}
+                    onChange={(e) => setTxForm({...txForm, type: e.target.value})}
+                  >
+                    <option value="INCOME">🟢 Receita / Entrada (+)</option>
+                    <option value="EXPENSE">🔴 Despesa / Saída (-)</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label className={styles.modalLabel}>Conta / Banco</label>
+                  <select 
+                    className={styles.select}
+                    value={txForm.bankId}
+                    onChange={(e) => setTxForm({...txForm, bankId: e.target.value})}
+                  >
+                    {banks.map((b: any) => (
+                      <option key={b.id} value={b.id}>{b.name} (Saldo: {formatCurrency(b.balance)})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <Input 
+                  label="Descrição da Transação" 
+                  required 
+                  value={txForm.description}
+                  onChange={(e) => setTxForm({...txForm, description: e.target.value})}
+                  placeholder="Ex: Pagamento Fornecedor Toxina Botulínica"
+                />
+
+                <Input 
+                  label="Valor (R$)" 
+                  type="number" 
+                  step="0.01" 
+                  min="0.01"
+                  required 
+                  value={txForm.amount}
+                  onChange={(e) => setTxForm({...txForm, amount: e.target.value})}
+                  placeholder="0,00"
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <label className={styles.modalLabel}>Status do Pagamento</label>
+                  <select 
+                    className={styles.select}
+                    value={txForm.status}
+                    onChange={(e) => setTxForm({...txForm, status: e.target.value})}
+                  >
+                    <option value="PAID">● Pago / Liquidado</option>
+                    <option value="PENDING">○ Pendente / Agendado</option>
+                  </select>
+                </div>
+
+                {selectedTx && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    <label className={styles.modalLabel} style={{ color: 'var(--gold-hover)' }}>
+                      Justificativa da Alteração (Obrigatória para Auditoria)
+                    </label>
+                    <textarea 
+                      className={styles.justificationArea}
+                      placeholder="Descreva o motivo desta alteração..."
+                      required
+                      value={justification}
+                      onChange={(e) => setJustification(e.target.value)}
+                    />
                   </div>
+                )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <label style={{ fontSize: '0.85rem', color: '#ccc' }}>Banco de Origem/Destino</label>
-                    <select 
-                      className={styles.select}
-                      value={txForm.bankId}
-                      onChange={(e) => setTxForm({...txForm, bankId: e.target.value})}
-                    >
-                      {banks.map((b: any) => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <Input 
-                    label="Descrição" 
-                    required 
-                    value={txForm.description}
-                    onChange={(e) => setTxForm({...txForm, description: e.target.value})}
-                  />
-                  <Input 
-                    label="Valor (R$)" 
-                    type="number" 
-                    step="0.01" 
-                    required 
-                    value={txForm.amount}
-                    onChange={(e) => setTxForm({...txForm, amount: e.target.value})}
-                  />
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <label style={{ fontSize: '0.85rem', color: '#555' }}>Status Atual</label>
-                    <select 
-                      className={styles.select}
-                      value={txForm.status}
-                      onChange={(e) => setTxForm({...txForm, status: e.target.value})}
-                    >
-                      <option value="PAID">Pago / Recebido</option>
-                      <option value="PENDING">Pendente / Agendado</option>
-                    </select>
-                  </div>
-
-                  {selectedTx && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', color: 'var(--gold-primary)', fontWeight: '600' }}>Justificativa da Alteração</label>
-                      <textarea 
-                        className={styles.justificationArea}
-                        placeholder="Por que você está alterando esta transação?"
-                        required
-                        value={justification}
-                        onChange={(e) => setJustification(e.target.value)}
-                      />
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-                    <Button type="button" variant="secondary" onClick={() => { setIsTxModalOpen(false); setSelectedTx(null); setJustification(''); }}>Cancelar</Button>
-                    <Button type="submit">{selectedTx ? 'Salvar Alterações' : 'Confirmar'}</Button>
-                  </div>
-                </form>
-              </div>
-            </Card>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <Button type="button" variant="secondary" onClick={() => { setIsTxModalOpen(false); setSelectedTx(null); setJustification(''); }}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    {selectedTx ? 'Salvar Alterações' : 'Confirmar Lançamento'}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Modal de Novo Banco */}
       {isBankModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
-            <Card>
-              <div className={styles.modalContent}>
-                <h2>Novo Banco</h2>
-                <form onSubmit={handleBankSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <Input 
-                    label="Nome do Banco / Conta" 
-                    required 
-                    value={bankForm.name}
-                    onChange={(e) => setBankForm({...bankForm, name: e.target.value})}
-                  />
-                  <Input 
-                    label="Saldo Inicial (R$)" 
-                    type="number" 
-                    step="0.01" 
-                    required 
-                    value={bankForm.balance}
-                    onChange={(e) => setBankForm({...bankForm, balance: e.target.value})}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-                    <Button type="button" variant="secondary" onClick={() => setIsBankModalOpen(false)}>Cancelar</Button>
-                    <Button type="submit">Salvar Banco</Button>
-                  </div>
-                </form>
-              </div>
-            </Card>
+            <div className={styles.modalContent}>
+              <h2 className={styles.modalTitle}>Cadastrar Nova Conta Bancária</h2>
+              
+              <form onSubmit={handleBankSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <Input 
+                  label="Nome da Conta / Banco" 
+                  required 
+                  value={bankForm.name}
+                  onChange={(e) => setBankForm({...bankForm, name: e.target.value})}
+                  placeholder="Ex: Itaú PJ, Nubank, Caixa Físico"
+                />
+                
+                <Input 
+                  label="Saldo Inicial (R$)" 
+                  type="number" 
+                  step="0.01" 
+                  required 
+                  value={bankForm.balance}
+                  onChange={(e) => setBankForm({...bankForm, balance: e.target.value})}
+                  placeholder="0,00"
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <Button type="button" variant="secondary" onClick={() => setIsBankModalOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    Salvar Conta
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal de Exclusão */}
+      {/* Modal de Exclusão com Auditoria */}
       {isDeleteModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
-            <Card>
-              <div className={styles.modalContent}>
-                <h2 style={{ color: '#f44336' }}>Confirmar Exclusão</h2>
-                <p style={{ color: 'var(--foreground)' }}>Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
-                <div style={{ margin: '1rem 0' }}>
-                  <label style={{ fontSize: '0.85rem', color: 'var(--gold-primary)', fontWeight: '600' }}>Justificativa da Exclusão</label>
-                  <textarea 
-                    className={styles.justificationArea}
-                    placeholder="Justifique a exclusão desta transação..."
-                    required
-                    value={justification}
-                    onChange={(e) => setJustification(e.target.value)}
-                  />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                  <Button variant="secondary" onClick={() => { setIsDeleteModalOpen(false); setJustification(''); }}>Cancelar</Button>
-                  <Button style={{ backgroundColor: '#f44336', color: '#fff' }} onClick={handleConfirmDelete}>Confirmar Exclusão</Button>
-                </div>
+            <div className={styles.modalContent}>
+              <h2 className={styles.modalTitle} style={{ color: 'var(--error)' }}>Confirmar Exclusão</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita e será registrada nos logs de auditoria.
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label className={styles.modalLabel} style={{ color: 'var(--gold-hover)' }}>
+                  Justificativa da Exclusão (Obrigatória)
+                </label>
+                <textarea 
+                  className={styles.justificationArea}
+                  placeholder="Justifique o motivo do estorno / exclusão..."
+                  required
+                  value={justification}
+                  onChange={(e) => setJustification(e.target.value)}
+                />
               </div>
-            </Card>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <Button variant="secondary" onClick={() => { setIsDeleteModalOpen(false); setJustification(''); }}>
+                  Cancelar
+                </Button>
+                <Button style={{ backgroundColor: 'var(--error)', color: '#fff' }} onClick={handleConfirmDelete}>
+                  Confirmar Exclusão
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal de Importação */}
-
+      {/* Modal de Importação de Extrato */}
       {isImportModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal} style={{ maxWidth: '800px' }}>
-            <Card>
-              <div className={styles.modalContent}>
-                <h2>Confirmar Importação de Extrato</h2>
-                <p>Selecione as transações que deseja importar para o banco:</p>
-                <select 
-                  className={styles.select}
-                  value={importBankId}
-                  onChange={(e) => setImportBankId(e.target.value)}
-                  style={{ marginBottom: '1rem' }}
-                >
-                  {banks.map((b: any) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-                
-                <div className={styles.tableWrapper} style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Descrição Extrato</th>
-                        <th>Valor</th>
-                        <th>Ação Proposta</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {importPreview.map((item, idx) => (
-                        <tr key={idx} style={{ background: item.reconcileWithId ? 'rgba(212, 175, 55, 0.05)' : 'transparent' }}>
-                          <td>{new Date(item.date).toLocaleDateString()}</td>
-                          <td>
-                            <div style={{ fontWeight: '600' }}>{item.description}</div>
-                            {item.reconcileWithId && (
-                              <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--gold-primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                🔗 Conciliar com: <span style={{ textDecoration: 'underline' }}>{item.reconcileWithDesc}</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className={item.amount > 0 ? styles.income : styles.expense}>
-                            {formatCurrency(item.amount)}
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', cursor: 'pointer', justifyContent: 'center' }}>
-                              <input 
-                                type="checkbox" 
-                                defaultChecked 
-                                onChange={(e) => {
-                                  const newPreview = [...importPreview]
-                                  newPreview[idx].selected = e.target.checked
-                                  setImportPreview(newPreview)
-                                }}
-                              />
-                              <span style={{ 
-                                fontWeight: 'bold', 
-                                color: item.reconcileWithId ? 'var(--gold-primary)' : 'inherit' 
-                              }}>
-                                {item.reconcileWithId ? 'Conciliar' : 'Lançar'}
-                              </span>
-                            </label>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+            <div className={styles.modalContent}>
+              <h2 className={styles.modalTitle}>Confirmar Importação de Extrato Bancário</h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Selecione as transações identificadas no arquivo para conciliar ou lançar:
+              </p>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-                  <Button variant="secondary" onClick={() => setIsImportModalOpen(false)}>Cancelar</Button>
-                  <Button 
-                    disabled={importing}
-                    onClick={async () => {
-                      if (importPreview.filter(p => p.selected !== false).length === 0) return alert('Selecione ao menos uma transação.')
-                      setImporting(true)
-                      const selected = importPreview.filter(p => p.selected !== false)
-                      const targetBankId = importBankId || banks[0]?.id
-                      const res = await bulkImportTransactions({
-                        bankId: targetBankId,
-                        transactions: selected
-                      })
-                      setImporting(false)
-                      if (res.success) {
-                        setIsImportModalOpen(false)
-                        setImportPreview([])
-                        load()
-                      } else {
-                        alert(res.error)
-                      }
-                    }}
-                  >
-                    {importing ? 'Importando...' : `Importar ${importPreview.filter(p => p.selected !== false).length} Transações`}
-                  </Button>
-                </div>
+              <select 
+                className={styles.select}
+                value={importBankId}
+                onChange={(e) => setImportBankId(e.target.value)}
+              >
+                {banks.map((b: any) => (
+                  <option key={b.id} value={b.id}>Conta Destino: {b.name}</option>
+                ))}
+              </select>
+              
+              <div className={styles.tableWrapper} style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Descrição no Extrato</th>
+                      <th>Valor</th>
+                      <th style={{ textAlign: 'center' }}>Ação Proposta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importPreview.map((item, idx) => (
+                      <tr key={idx} style={{ background: item.reconcileWithId ? 'var(--gold-50)' : 'transparent' }}>
+                        <td style={{ whiteSpace: 'nowrap' }}>{new Date(item.date).toLocaleDateString('pt-BR')}</td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{item.description}</div>
+                          {item.reconcileWithId && (
+                            <div style={{ fontSize: '0.75rem', marginTop: '0.2rem', color: 'var(--gold-hover)', fontWeight: 'bold' }}>
+                              🔗 Conciliar com: <span style={{ textDecoration: 'underline' }}>{item.reconcileWithDesc}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className={item.amount > 0 ? styles.income : styles.expense} style={{ whiteSpace: 'nowrap' }}>
+                          {formatCurrency(item.amount)}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', cursor: 'pointer', justifyContent: 'center' }}>
+                            <input 
+                              type="checkbox" 
+                              defaultChecked 
+                              onChange={(e) => {
+                                const newPreview = [...importPreview]
+                                newPreview[idx].selected = e.target.checked
+                                setImportPreview(newPreview)
+                              }}
+                            />
+                            <span style={{ 
+                              fontWeight: 'bold', 
+                              color: item.reconcileWithId ? 'var(--gold-hover)' : 'inherit' 
+                            }}>
+                              {item.reconcileWithId ? 'Conciliar' : 'Lançar'}
+                            </span>
+                          </label>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </Card>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <Button variant="secondary" onClick={() => setIsImportModalOpen(false)}>Cancelar</Button>
+                <Button 
+                  disabled={importing}
+                  onClick={async () => {
+                    if (importPreview.filter(p => p.selected !== false).length === 0) return alert('Selecione ao menos uma transação.')
+                    setImporting(true)
+                    const selected = importPreview.filter(p => p.selected !== false)
+                    const targetBankId = importBankId || banks[0]?.id
+                    const res = await bulkImportTransactions({
+                      bankId: targetBankId,
+                      transactions: selected
+                    })
+                    setImporting(false)
+                    if (res.success) {
+                      setIsImportModalOpen(false)
+                      setImportPreview([])
+                      load(startDate, endDate)
+                    } else {
+                      alert(res.error)
+                    }
+                  }}
+                >
+                  {importing ? 'Importando...' : `Importar ${importPreview.filter(p => p.selected !== false).length} Transações`}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
       {/* Modal de Logs de Auditoria */}
       {isLogModalOpen && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modal} style={{ maxWidth: '900px' }}>
-            <Card>
-              <div className={styles.modalContent}>
-                <h2>📜 Histórico de Alterações e Auditoria</h2>
-                <p>Registros de modificações críticas no sistema financeiro.</p>
-                
-                <div className={styles.tableWrapper} style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Data/Hora</th>
-                        <th>Usuário</th>
-                        <th>Ação</th>
-                        <th>Justificativa / Detalhes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {auditLogs.length === 0 ? (
-                        <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum log encontrado.</td></tr>
-                      ) : (
-                        auditLogs.map((log, idx) => (
-                          <tr key={idx}>
-                            <td style={{ fontSize: '0.85rem' }}>{new Date(log.createdAt).toLocaleString()}</td>
-                            <td style={{ fontWeight: '600' }}>{log.user.name}</td>
-                            <td>
-                              <span className={styles.statsBadge} style={{ 
-                                backgroundColor: log.action.includes('DELETE') ? 'var(--error)' : 'var(--gold-primary)',
-                                color: '#fff'
-                              }}>
-                                {log.action}
-                              </span>
-                            </td>
-                            <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                              {log.details?.justification || JSON.stringify(log.details)}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                  <Button variant="secondary" onClick={() => setIsLogModalOpen(false)}>Fechar</Button>
-                </div>
+          <div className={styles.modal} style={{ maxWidth: '850px' }}>
+            <div className={styles.modalContent}>
+              <h2 className={styles.modalTitle}>📜 Histórico de Auditoria Financeira</h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Registro imutável de alterações manuais e exclusões realizadas no financeiro.
+              </p>
+              
+              <div className={styles.tableWrapper} style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Data/Hora</th>
+                      <th>Usuário</th>
+                      <th>Ação</th>
+                      <th>Justificativa / Detalhes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.length === 0 ? (
+                      <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>Nenhum log encontrado.</td></tr>
+                    ) : (
+                      auditLogs.map((log, idx) => (
+                        <tr key={idx}>
+                          <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                            {new Date(log.createdAt).toLocaleString('pt-BR')}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{log.user?.name || 'Sistema'}</td>
+                          <td>
+                            <span className={styles.statsBadge} style={{ 
+                              backgroundColor: log.action.includes('DELETE') ? 'var(--error-bg)' : 'var(--gold-100)',
+                              color: log.action.includes('DELETE') ? 'var(--error)' : 'var(--gold-hover)',
+                              border: `1px solid ${log.action.includes('DELETE') ? 'var(--error)' : 'var(--border-strong)'}`
+                            }}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                            {log.details?.justification || JSON.stringify(log.details)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </Card>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button variant="secondary" onClick={() => setIsLogModalOpen(false)}>Fechar</Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
