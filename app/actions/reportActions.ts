@@ -50,7 +50,7 @@ export async function getInventoryReport() {
       include: { supplier: { select: { name: true } } },
       orderBy: { stock: 'asc' }
     })
-    return { success: true, products }
+    return { success: true, products, role: session.role }
   } catch (err: any) {
     return { error: 'Erro ao gerar relatório de estoque' }
   }
@@ -157,7 +157,7 @@ export async function getFinancialReport(startDate?: string, endDate?: string) {
       fixedExpensesPercentage
     }
 
-    return { success: true, transactions, dre }
+    return { success: true, transactions, dre, role: session.role }
   } catch (err: any) {
     console.error('Financial Report Error:', err)
     return { error: 'Erro ao gerar relatório financeiro' }
@@ -189,7 +189,7 @@ export async function getShippingReport(startDate?: string, endDate?: string) {
       },
       orderBy: { createdAt: 'desc' }
     })
-    return { success: true, shipments }
+    return { success: true, shipments, role: session.role }
   } catch (err: any) {
     return { error: 'Erro ao gerar relatório de envios' }
   }
@@ -217,7 +217,7 @@ export async function getAppointmentsReport(startDate?: string, endDate?: string
       },
       orderBy: { date: 'desc' }
     })
-    return { success: true, appointments }
+    return { success: true, appointments, role: session.role }
   } catch (err: any) {
     return { error: 'Erro ao gerar relatório de consultas' }
   }

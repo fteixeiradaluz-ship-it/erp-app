@@ -108,17 +108,8 @@ export default function RelatoriosPage() {
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    async function detectRole() {
-      const res = await getSalesReport()
-      if (res && 'role' in res) setRole(res.role as string)
-    }
-    detectRole()
-  }, [])
-
-  useEffect(() => {
-    if (!role) return
     load()
-  }, [activeTab, startDate, endDate, role])
+  }, [activeTab, startDate, endDate])
 
   async function load() {
     setLoading(true)
@@ -137,19 +128,22 @@ export default function RelatoriosPage() {
     else if (activeTab === 'appointments') res = await getAppointmentsReport(startDate, endDate)
     else if (activeTab === 'shipping') res = await getShippingReport(startDate, endDate)
 
+    if (res?.role && role !== res.role) {
+      setRole(res.role)
+    }
+
     if (res?.success) {
-      if (activeTab === 'sales' || activeTab === 'deleted_sales') setData(res.sales)
-      else if (activeTab === 'inventory') setData(res.products)
+      if (activeTab === 'sales' || activeTab === 'deleted_sales') setData(res.sales || [])
+      else if (activeTab === 'inventory') setData(res.products || [])
       else if (activeTab === 'financial') {
-        setData(res.transactions)
-        setDre(res.dre)
+        setData(res.transactions || [])
+        setDre(res.dre || null)
       }
-      else if (activeTab === 'appointments') setData(res.appointments)
-      else if (activeTab === 'shipping') setData(res.shipments)
+      else if (activeTab === 'appointments') setData(res.appointments || [])
+      else if (activeTab === 'shipping') setData(res.shipments || [])
     } else {
       console.error("Load error:", res?.error)
       setData([])
-      if (res?.error) alert(`Erro ao carregar dados: ${res.error}`)
     }
     setLoading(false)
   }
@@ -170,55 +164,56 @@ export default function RelatoriosPage() {
   }
 
   const exportCSV = () => {
-    if (data.length === 0) return alert('Sem dados para exportar')
+    if (!data || data.length === 0) return alert('Sem dados para exportar')
     let csvContent = 'data:text/csv;charset=utf-8,'
 
     // Header based on visible columns
-    const currentCols = columnsConfig[activeTab].filter(col => isColVisible(col.id))
+    const currentCols = columnsConfig[activeTab]?.filter(col => isColVisible(col.id)) || []
     csvContent += currentCols.map(c => c.label).join(',') + '\n'
 
     data.forEach((item: any) => {
+      if (!item) return
       const rowData: string[] = []
       
       currentCols.forEach(col => {
         if (activeTab === 'sales' || activeTab === 'deleted_sales') {
-          if (col.id === 'date') rowData.push(new Date(item.createdAt).toLocaleDateString())
+          if (col.id === 'date') rowData.push(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '')
           else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
-          else if (col.id === 'items') rowData.push(`"${item.items.map((i: any) => `${i.quantity}x ${i.product.name}`).join(' | ')}"`)
+          else if (col.id === 'items') rowData.push(`"${(item.items || []).map((i: any) => `${i.quantity}x ${i.product?.name || 'Item'}`).join(' | ')}"`)
           else if (col.id === 'seller') rowData.push(item.user?.name || '---')
-          else if (col.id === 'method') rowData.push(item.paymentMethod)
+          else if (col.id === 'method') rowData.push(item.paymentMethod || '')
           else if (col.id === 'commission') {
-             const comm = item.user.commissionPercent !== null ? item.user.commissionPercent : globalCommission
-             rowData.push((item.totalAmount * (comm / 100)).toFixed(2))
+             const comm = item.user?.commissionPercent !== null && item.user?.commissionPercent !== undefined ? item.user.commissionPercent : globalCommission
+             rowData.push(((Number(item.totalAmount) || 0) * (comm / 100)).toFixed(2))
           }
-          else if (col.id === 'total') rowData.push(item.totalAmount.toString())
+          else if (col.id === 'total') rowData.push((Number(item.totalAmount) || 0).toString())
           else if (col.id === 'justification') rowData.push(`"${item.deletionJustification || ''}"`)
         }
         else if (activeTab === 'inventory') {
-          if (col.id === 'product') rowData.push(item.name)
+          if (col.id === 'product') rowData.push(item.name || '')
           else if (col.id === 'supplier') rowData.push(item.supplier?.name || '---')
-          else if (col.id === 'cost') rowData.push(item.cost.toString())
-          else if (col.id === 'price') rowData.push(item.price.toString())
-          else if (col.id === 'stock') rowData.push(item.stock.toString())
+          else if (col.id === 'cost') rowData.push((Number(item.cost) || 0).toString())
+          else if (col.id === 'price') rowData.push((Number(item.price) || 0).toString())
+          else if (col.id === 'stock') rowData.push((Number(item.stock) || 0).toString())
         }
         else if (activeTab === 'financial') {
-          if (col.id === 'date') rowData.push(new Date(item.createdAt).toLocaleDateString())
-          else if (col.id === 'description') rowData.push(`"${item.description}"`)
+          if (col.id === 'date') rowData.push(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '')
+          else if (col.id === 'description') rowData.push(`"${item.description || ''}"`)
           else if (col.id === 'bank') rowData.push(item.bank?.name || '---')
-          else if (col.id === 'type') rowData.push(item.type)
-          else if (col.id === 'amount') rowData.push(item.amount.toString())
+          else if (col.id === 'type') rowData.push(item.type || '')
+          else if (col.id === 'amount') rowData.push((Number(item.amount) || 0).toString())
         }
         else if (activeTab === 'appointments') {
-          const dt = new Date(item.date)
-          if (col.id === 'date') rowData.push(dt.toLocaleDateString())
-          else if (col.id === 'time') rowData.push(dt.toLocaleTimeString())
+          const dt = item.date ? new Date(item.date) : null
+          if (col.id === 'date') rowData.push(dt ? dt.toLocaleDateString() : '')
+          else if (col.id === 'time') rowData.push(dt ? dt.toLocaleTimeString() : '')
           else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
           else if (col.id === 'phone') rowData.push(item.customer?.phone || '---')
-          else if (col.id === 'status') rowData.push(item.status)
+          else if (col.id === 'status') rowData.push(item.status || '')
           else if (col.id === 'return') rowData.push(item.isReturn ? 'Sim' : 'Não')
         }
         else if (activeTab === 'shipping') {
-          if (col.id === 'date') rowData.push(new Date(item.createdAt).toLocaleDateString())
+          if (col.id === 'date') rowData.push(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '')
           else if (col.id === 'customer') rowData.push(item.customer?.name || '---')
           else if (col.id === 'phone') rowData.push(item.customer?.phone || '---')
           else if (col.id === 'seller') rowData.push(item.user?.name || '---')
@@ -851,7 +846,7 @@ export default function RelatoriosPage() {
           <div className={styles.modalContent}>
             <h3>⚠️ Confirmar Exclusão</h3>
             <p style={{ marginBottom: '1rem', fontSize: '0.9rem' }}>
-              Você está prestes a excluir a venda de <strong>{selectedSale?.customer.name}</strong> no valor de <strong>{formatCurrency(selectedSale?.totalAmount)}</strong>.
+              Você está prestes a excluir a venda de <strong>{selectedSale?.customer?.name || 'Cliente'}</strong> no valor de <strong>{formatCurrency(selectedSale?.totalAmount)}</strong>.
               <br/><br/>
               <strong>Esta ação irá:</strong>
               <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
