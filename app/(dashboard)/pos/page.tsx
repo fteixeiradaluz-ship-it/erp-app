@@ -1,19 +1,37 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { getPOSData, submitSale } from '@/app/actions/saleActions'
 import { getSettings } from '@/app/actions/settingsActions'
 import { useSearchParams } from 'next/navigation'
 import styles from './pos.module.css'
 import rStyles from './receipt.module.css'
 
-type Product = { id: string; name: string; price: number; stock: number; type: string; }
-type Customer = { id: string; name: string; }
-type CartItem = Product & { quantity: number; }
-type Bank = { id: string; name: string; balance: number; }
+type Product = { 
+  id: string; 
+  name: string; 
+  price: number; 
+  stock: number; 
+  type: string; 
+}
+
+type Customer = { 
+  id: string; 
+  name: string; 
+  document?: string | null;
+}
+
+type CartItem = Product & { 
+  quantity: number; 
+}
+
+type Bank = { 
+  id: string; 
+  name: string; 
+  balance: number; 
+}
 
 type SplitPaymentRow = {
   method: 'PIX' | 'A_VISTA' | 'DEBITO' | 'CARTAO';
@@ -24,7 +42,12 @@ type SplitPaymentRow = {
 
 export default function POSPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Carregando PDV...</div>}>
+    <Suspense fallback={
+      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✨</div>
+        <p>Carregando Frente de Caixa...</p>
+      </div>
+    }>
       <POSPageContent />
     </Suspense>
   )
@@ -35,9 +58,11 @@ function POSPageContent() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('PIX')
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'A_VISTA' | 'DEBITO' | 'CARTAO' | 'MULTIPLO'>('PIX')
   const [installments, setInstallments] = useState(1)
   const [discount, setDiscount] = useState(0)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [mobileTab, setMobileTab] = useState<'catalog' | 'checkout'>('catalog')
   
   // Split payments state
   const [splitPayments, setSplitPayments] = useState<SplitPaymentRow[]>([
@@ -65,7 +90,7 @@ function POSPageContent() {
     Promise.all([getPOSData(), getSettings()]).then(([posData, settingsData]) => {
       const loadedProducts = (posData.products || []) as Product[]
       setProducts(loadedProducts)
-      setCustomers(posData.customers)
+      setCustomers(posData.customers || [])
       const loadedBanks = (posData.banks || []) as Bank[]
       setBanks(loadedBanks)
       if (loadedBanks.length > 0) {
@@ -98,7 +123,7 @@ function POSPageContent() {
     }
   }, [paramAppointmentId])
 
-  // Auto-add service (Consulta) if faturando from Agenda
+  // Auto-add service (Consulta/Procedimento) if faturando from Agenda
   useEffect(() => {
     if (products.length > 0 && paramAppointmentId && !loading) {
       const serviceItem = products.find(p => p.type === 'SERVICE') || 
@@ -114,10 +139,24 @@ function POSPageContent() {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id)
       if (existing) {
-        if (product.type !== 'SERVICE' && existing.quantity >= product.stock) return prev;
+        if (product.type !== 'SERVICE' && existing.quantity >= product.stock) {
+          alert(`Estoque máximo atingido para ${product.name} (${product.stock} un).`)
+          return prev
+        }
         return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
       }
       return [...prev, { ...product, quantity: 1 }]
+    })
+  }
+
+  const decreaseQuantity = (productId: string) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === productId)
+      if (!existing) return prev
+      if (existing.quantity <= 1) {
+        return prev.filter(item => item.id !== productId)
+      }
+      return prev.map(item => item.id === productId ? { ...item, quantity: item.quantity - 1 } : item)
     })
   }
 
@@ -125,14 +164,32 @@ function POSPageContent() {
     setCart(prev => prev.filter(item => item.id !== id))
   }
 
+  const clearCart = () => {
+    if (cart.length === 0) return
+    if (confirm('Deseja realmente limpar todos os itens da comanda?')) {
+      setCart([])
+    }
+  }
+
   const updateCartItemPrice = (id: string, newPrice: number) => {
     setCart(prev => prev.map(item => item.id === id ? { ...item, price: newPrice } : item))
   }
 
-  // Totais
-  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
-  const discountValue = (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') ? (subtotal * (discount / 100)) : 0
-  const total = Math.max(0, subtotal - discountValue - depositAmount)
+  // Calculation of totals
+  const subtotal = useMemo(() => {
+    return cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
+  }, [cart])
+
+  const discountValue = useMemo(() => {
+    if (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') {
+      return subtotal * (discount / 100)
+    }
+    return 0
+  }, [subtotal, paymentMethod, discount])
+
+  const total = useMemo(() => {
+    return Math.max(0, subtotal - discountValue - depositAmount)
+  }, [subtotal, discountValue, depositAmount])
 
   // Split payment helper methods
   const addSplitRow = () => {
@@ -150,12 +207,17 @@ function POSPageContent() {
     setSplitPayments(prev => prev.map((row, idx) => idx === index ? { ...row, [field]: value } : row))
   }
 
-  const splitTotal = splitPayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
-  const splitDifference = total - splitTotal
+  const splitTotal = useMemo(() => {
+    return splitPayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
+  }, [splitPayments])
+
+  const splitDifference = useMemo(() => {
+    return total - splitTotal
+  }, [total, splitTotal])
 
   const handleCheckout = async () => {
-    if (!selectedCustomer) return alert('Selecione um cliente!')
-    if (cart.length === 0) return alert('Carrinho vazio!')
+    if (!selectedCustomer) return alert('Por favor, selecione um cliente!')
+    if (cart.length === 0) return alert('O carrinho / comanda está vazio!')
     
     if (paymentMethod === 'MULTIPLO') {
       if (Math.abs(splitDifference) > 0.05) {
@@ -166,37 +228,42 @@ function POSPageContent() {
     }
     
     setSubmitting(true)
-    const result = await submitSale({
-      customerId: selectedCustomer,
-      paymentMethod,
-      installments: paymentMethod === 'CARTAO' ? installments : 1,
-      discount: (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') ? discount : 0,
-      items: cart.map(item => ({ productId: item.id, quantity: item.quantity, price: item.price })),
-      depositApplied: depositAmount,
-      appointmentId: appointmentId || undefined,
-      bankId: selectedBank,
-      splitPayments: paymentMethod === 'MULTIPLO' ? splitPayments.map(p => ({
-        method: p.method,
-        amount: Number(p.amount),
-        installments: p.installments || 1,
-        bankId: p.bankId || selectedBank
-      })) : undefined
-    })
+    try {
+      const result = await submitSale({
+        customerId: selectedCustomer,
+        paymentMethod,
+        installments: paymentMethod === 'CARTAO' ? installments : 1,
+        discount: (paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') ? discount : 0,
+        items: cart.map(item => ({ productId: item.id, quantity: item.quantity, price: item.price })),
+        depositApplied: depositAmount,
+        appointmentId: appointmentId || undefined,
+        bankId: selectedBank,
+        splitPayments: paymentMethod === 'MULTIPLO' ? splitPayments.map(p => ({
+          method: p.method,
+          amount: Number(p.amount),
+          installments: p.installments || 1,
+          bankId: p.bankId || selectedBank
+        })) : undefined
+      })
 
-    if (result.error) {
-      alert(result.error)
-    } else {
-      setSaleResult(result.sale)
-      setCart([])
-      setSelectedCustomer('')
-      setDiscount(0)
-      setInstallments(1)
-      setDepositAmount(0)
-      setDepositMethod('')
-      setAppointmentId(null)
-      setPaymentMethod('PIX')
+      if (result.error) {
+        alert(result.error)
+      } else {
+        setSaleResult(result.sale)
+        setCart([])
+        setSelectedCustomer('')
+        setDiscount(0)
+        setInstallments(1)
+        setDepositAmount(0)
+        setDepositMethod('')
+        setAppointmentId(null)
+        setPaymentMethod('PIX')
+      }
+    } catch (err: any) {
+      alert('Erro ao processar faturamento: ' + (err.message || 'Erro inesperado'))
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   const handlePrint = () => {
@@ -207,197 +274,397 @@ function POSPageContent() {
     setSaleResult(null)
   }
 
-  if (loading) return <div className={styles.container}>Carregando produtos...</div>
+  // Filtered Products
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchesCategory = activeCategory === 'ALL' || p.type === activeCategory
+      const matchesSearch = searchTerm.trim() === '' || 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      return matchesCategory && matchesSearch
+    })
+  }, [products, activeCategory, searchTerm])
 
-  const filteredProducts = products.filter(p => {
-    if (activeCategory === 'ALL') return true
-    return p.type === activeCategory
-  })
+  const totalCartItemsCount = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.quantity, 0)
+  }, [cart])
+
+  if (loading) {
+    return (
+      <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>✨</div>
+        <p style={{ fontWeight: 600 }}>Carregando dados do Ponto de Venda...</p>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.container}>
+      {/* ── Top Header ────────────────────────────────────────── */}
       <header className={styles.header}>
         <div>
-          <h1>🛒 Ponto de Venda (PDV)</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Faturamento rápido de consultas, pacotes e produtos dermatológicos.
+          <h1 className={styles.headerTitle}>
+            <span>🛒 Ponto de Venda (PDV)</span>
+          </h1>
+          <p className={styles.headerSubtitle}>
+            Faturamento rápido e intuitivo de procedimentos, consultas e produtos home care.
           </p>
         </div>
       </header>
 
+      {/* ── Prepayment / Signal Notice ────────────────────────── */}
       {depositAmount > 0 && (
-        <div style={{
-          background: 'rgba(76, 175, 80, 0.1)',
-          border: '1px solid rgba(76, 175, 80, 0.3)',
-          padding: '0.75rem 1rem',
-          borderRadius: '8px',
-          color: '#2e7d32',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '0.9rem'
-        }}>
-          <span>💳 <strong>Sinal Identificado:</strong> R$ {depositAmount.toFixed(2)} já recebido via {depositMethod} no agendamento.</span>
-          <span style={{ fontSize: '0.8rem', background: '#2e7d32', color: '#fff', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>
+        <div className={styles.depositBanner}>
+          <div className={styles.depositBannerText}>
+            <span>💳</span>
+            <span>
+              <strong>Sinal Identificado na Agenda:</strong> R$ {depositAmount.toFixed(2)} já recebido via {depositMethod}.
+            </span>
+          </div>
+          <span className={styles.depositBannerBadge}>
             Abatido Automaticamente
           </span>
         </div>
       )}
 
-      <div className={styles.grid}>
-        {/* Catálogo de Produtos e Serviços */}
-        <div className={styles.productCatalog}>
-          <div className={styles.categoryFilter}>
-            <button 
-              className={`${styles.categoryBtn} ${activeCategory === 'ALL' ? styles.activeCategory : ''}`}
-              onClick={() => setActiveCategory('ALL')}
-            >
-              Todos ({products.length})
-            </button>
-            <button 
-              className={`${styles.categoryBtn} ${activeCategory === 'SERVICE' ? styles.activeCategory : ''}`}
-              onClick={() => setActiveCategory('SERVICE')}
-            >
-              Procedimentos / Serviços ({products.filter(p => p.type === 'SERVICE').length})
-            </button>
-            <button 
-              className={`${styles.categoryBtn} ${activeCategory === 'PRODUCT' ? styles.activeCategory : ''}`}
-              onClick={() => setActiveCategory('PRODUCT')}
-            >
-              Produtos Home Care ({products.filter(p => p.type === 'PRODUCT').length})
-            </button>
-          </div>
+      {/* ── Mobile Tab Switcher (Small Screens) ───────────────── */}
+      <div className={styles.mobileTabs}>
+        <button 
+          className={`${styles.mobileTabBtn} ${mobileTab === 'catalog' ? styles.mobileTabActive : ''}`}
+          onClick={() => setMobileTab('catalog')}
+        >
+          🔍 Catálogo ({products.length})
+        </button>
+        <button 
+          className={`${styles.mobileTabBtn} ${mobileTab === 'checkout' ? styles.mobileTabActive : ''}`}
+          onClick={() => setMobileTab('checkout')}
+        >
+          🛍️ Comanda ({totalCartItemsCount}) • R$ {total.toFixed(2)}
+        </button>
+      </div>
 
-          <div className={styles.productsGrid}>
-            {filteredProducts.map(p => (
-              <Card 
-                key={p.id} 
-                className={`${styles.productCard} ${p.type !== 'SERVICE' && p.stock <= 0 ? styles.disabledCard : ''}`}
-                onClick={() => addToCart(p)}
-              >
-                <span className={styles.productTypeBadge}>
-                  {p.type === 'SERVICE' ? '✨ SERVIÇO' : '📦 PRODUTO'}
-                </span>
-                <h3 className={styles.productName}>{p.name}</h3>
-                <div className={styles.productInfo}>
-                  <span className={styles.price}>R$ {p.price.toFixed(2)}</span>
-                  {p.type === 'PRODUCT' ? (
-                    <span className={p.stock > 0 ? styles.stock : styles.noStock}>
-                      {p.stock > 0 ? `${p.stock} em estoque` : 'Sem estoque'}
-                    </span>
-                  ) : (
-                    <span className={styles.stock} style={{ color: 'var(--gold-primary)' }}>Disponível</span>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Carrinho e Checkout */}
-        <Card className={styles.cartCard}>
-          <h2>Resumo do Pedido</h2>
+      {/* ── Main POS 2-Column Grid ───────────────────────────── */}
+      <div className={`${styles.posLayout} ${mobileTab === 'catalog' ? styles.showCatalog : styles.showCheckout}`}>
+        
+        {/* ── Left Column: Catálogo de Produtos e Procedimentos ── */}
+        <section className={styles.catalogSection}>
           
-          <div className={styles.cartItems}>
-            {cart.map(item => (
-              <div key={item.id} className={styles.cartItem}>
-                <div className={styles.cartItemDetails}>
-                  <strong>{item.name}</strong>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#666' }}>{item.quantity}x</span>
-                    <span style={{ fontSize: '0.8rem', color: '#666' }}>R$</span>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      min="0"
-                      value={item.price}
-                      onChange={(e) => updateCartItemPrice(item.id, parseFloat(e.target.value) || 0)}
-                      className={styles.priceInput}
-                    />
+          {/* Controls Bar: Busca e Filtros de Categoria */}
+          <div className={styles.controlsBar}>
+            <div className={styles.searchWrapper}>
+              <span className={styles.searchIcon}>🔍</span>
+              <input 
+                type="text"
+                placeholder="Buscar por nome do procedimento, serviço ou produto..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className={styles.searchInput}
+              />
+            </div>
+
+            <div className={styles.categoryFilter}>
+              <button 
+                className={`${styles.categoryBtn} ${activeCategory === 'ALL' ? styles.activeCategory : ''}`}
+                onClick={() => setActiveCategory('ALL')}
+              >
+                <span>Todos</span>
+                <span className={styles.categoryCount}>{products.length}</span>
+              </button>
+              <button 
+                className={`${styles.categoryBtn} ${activeCategory === 'SERVICE' ? styles.activeCategory : ''}`}
+                onClick={() => setActiveCategory('SERVICE')}
+              >
+                <span>✨ Procedimentos / Serviços</span>
+                <span className={styles.categoryCount}>{products.filter(p => p.type === 'SERVICE').length}</span>
+              </button>
+              <button 
+                className={`${styles.categoryBtn} ${activeCategory === 'PRODUCT' ? styles.activeCategory : ''}`}
+                onClick={() => setActiveCategory('PRODUCT')}
+              >
+                <span>📦 Home Care / Produtos</span>
+                <span className={styles.categoryCount}>{products.filter(p => p.type === 'PRODUCT').length}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Grid de Cards de Produtos */}
+          <div className={styles.productsGrid}>
+            {filteredProducts.map(p => {
+              const isService = p.type === 'SERVICE'
+              const isOutOfStock = !isService && p.stock <= 0
+              const isLowStock = !isService && p.stock > 0 && p.stock <= 5
+
+              return (
+                <div 
+                  key={p.id} 
+                  className={`${styles.productCard} ${isOutOfStock ? styles.disabledCard : ''}`}
+                  onClick={() => !isOutOfStock && addToCart(p)}
+                  title={isOutOfStock ? 'Produto indisponível em estoque' : 'Clique para adicionar à comanda'}
+                >
+                  <div className={styles.addBtnHint}>+</div>
+                  
+                  <div>
+                    <div className={styles.cardHeader}>
+                      <span className={`${styles.productTypeBadge} ${isService ? styles.badgeService : styles.badgeProduct}`}>
+                        {isService ? '✨ Serviço' : '📦 Produto'}
+                      </span>
+                    </div>
+
+                    <h3 className={styles.productName}>{p.name}</h3>
+                  </div>
+
+                  <div className={styles.productInfo}>
+                    <span className={styles.price}>R$ {p.price.toFixed(2)}</span>
+                    {isService ? (
+                      <span className={`${styles.stockStatus} ${styles.stockAvailable}`}>
+                        Disponível
+                      </span>
+                    ) : (
+                      <span className={`${styles.stockStatus} ${isOutOfStock ? styles.stockEmpty : isLowStock ? styles.stockLow : styles.stockAvailable}`}>
+                        {isOutOfStock ? 'Esgotado' : `${p.stock} un.`}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <button onClick={() => removeFromCart(item.id)} className={styles.removeBtn}>✕</button>
+              )
+            })}
+
+            {filteredProducts.length === 0 && (
+              <div className={styles.emptyCatalog}>
+                <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>🔎</p>
+                <p style={{ fontWeight: 600 }}>Nenhum item encontrado.</p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  Tente ajustar os termos de busca ou o filtro de categoria selecionado.
+                </p>
               </div>
-            ))}
-            {cart.length === 0 && <p className={styles.empty}>Nenhum item adicionado ao carrinho.</p>}
+            )}
+          </div>
+        </section>
+
+        {/* ── Right Column: Comanda / Checkout Panel ───────────── */}
+        <aside className={styles.checkoutPanel}>
+          
+          <div className={styles.panelHeader}>
+            <div className={styles.panelHeaderTitle}>
+              <span>Comanda de Venda</span>
+              <span className={styles.itemsBadge}>{totalCartItemsCount} itens</span>
+            </div>
+            {cart.length > 0 && (
+              <button onClick={clearCart} className={styles.clearCartBtn} title="Limpar todos os itens">
+                Limpar
+              </button>
+            )}
           </div>
 
-          <div className={styles.checkoutSettings}>
-            <div className={styles.field}>
-              <label>Cliente</label>
-              <select value={selectedCustomer} onChange={e => setSelectedCustomer(e.target.value)} className={styles.select}>
-                <option value="">-- Selecione o Cliente --</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
+          {/* Lista de Itens do Carrinho */}
+          <div className={styles.cartList}>
+            {cart.map(item => (
+              <div key={item.id} className={styles.cartItem}>
+                <div className={styles.itemMainInfo}>
+                  <p className={styles.itemName} title={item.name}>{item.name}</p>
+                  
+                  <div className={styles.itemControls}>
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.stopPropagation(); decreaseQuantity(item.id); }} 
+                      className={styles.qtyBtn}
+                      title="Diminuir quantidade"
+                    >
+                      -
+                    </button>
+                    <span className={styles.qtyDisplay}>{item.quantity}</span>
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.stopPropagation(); addToCart(item); }} 
+                      className={styles.qtyBtn}
+                      title="Aumentar quantidade"
+                    >
+                      +
+                    </button>
+
+                    <div className={styles.priceWrapper} style={{ marginLeft: '0.4rem' }}>
+                      <span>R$</span>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0"
+                        value={item.price}
+                        onChange={(e) => updateCartItemPrice(item.id, parseFloat(e.target.value) || 0)}
+                        className={styles.priceInput}
+                        title="Preço unitário customizado"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => removeFromCart(item.id)} 
+                  className={styles.removeBtn}
+                  title="Remover item da comanda"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+
+            {cart.length === 0 && (
+              <div className={styles.emptyCartNotice}>
+                <p style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>🛒</p>
+                <p>A comanda está vazia.</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Selecione procedimentos ou produtos ao lado para iniciar.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Formulário de Finalização */}
+          <div className={styles.checkoutForm}>
             
-            <div className={styles.field}>
-              <label>Forma de Pagamento</label>
-              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className={styles.select}>
-                <option value="PIX">PIX</option>
-                <option value="A_VISTA">À Vista (Dinheiro)</option>
-                <option value="DEBITO">Cartão de Débito</option>
-                <option value="CARTAO">Cartão de Crédito</option>
-                <option value="MULTIPLO">🔀 Pagamento Dividido / Múltiplo</option>
+            {/* Seletor de Cliente */}
+            <div className={styles.formField}>
+              <label className={styles.fieldLabel}>Cliente</label>
+              <select 
+                value={selectedCustomer} 
+                onChange={e => setSelectedCustomer(e.target.value)} 
+                className={styles.selectInput}
+              >
+                <option value="">-- Selecione o Cliente --</option>
+                {customers.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.document ? `(${c.document})` : ''}
+                  </option>
+                ))}
               </select>
             </div>
 
+            {/* Forma de Pagamento - Botões Visuais */}
+            <div className={styles.formField}>
+              <label className={styles.fieldLabel}>Forma de Pagamento</label>
+              <div className={styles.paymentGrid}>
+                <button
+                  type="button"
+                  className={`${styles.paymentPill} ${paymentMethod === 'PIX' ? styles.paymentPillActive : ''}`}
+                  onClick={() => setPaymentMethod('PIX')}
+                >
+                  ⚡ PIX
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.paymentPill} ${paymentMethod === 'A_VISTA' ? styles.paymentPillActive : ''}`}
+                  onClick={() => setPaymentMethod('A_VISTA')}
+                >
+                  💵 Dinheiro
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.paymentPill} ${paymentMethod === 'DEBITO' ? styles.paymentPillActive : ''}`}
+                  onClick={() => setPaymentMethod('DEBITO')}
+                >
+                  💳 Débito
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.paymentPill} ${paymentMethod === 'CARTAO' ? styles.paymentPillActive : ''}`}
+                  onClick={() => setPaymentMethod('CARTAO')}
+                >
+                  💳 Crédito
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.paymentPill} ${paymentMethod === 'MULTIPLO' ? styles.paymentPillActive : ''}`}
+                  onClick={() => setPaymentMethod('MULTIPLO')}
+                  style={{ gridColumn: '1 / -1' }}
+                >
+                  🔀 Pagamento Dividido / Múltiplo
+                </button>
+              </div>
+            </div>
+
+            {/* Conta Bancária Destino */}
             {paymentMethod !== 'MULTIPLO' && (
-              <div className={styles.field}>
-                <label>Conta Bancária de Destino</label>
-                <select value={selectedBank} onChange={e => setSelectedBank(e.target.value)} className={styles.select}>
-                  <option value="">-- Selecione --</option>
-                  {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>Conta Bancária de Destino</label>
+                <select 
+                  value={selectedBank} 
+                  onChange={e => setSelectedBank(e.target.value)} 
+                  className={styles.selectInput}
+                >
+                  <option value="">-- Selecione a Conta --</option>
+                  {banks.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} (Saldo: R$ {b.balance.toFixed(2)})
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
 
+            {/* Parcelamento no Crédito */}
             {paymentMethod === 'CARTAO' && (
-              <div className={styles.field}>
-                <label>Parcelas</label>
-                <select value={installments} onChange={e => setInstallments(Number(e.target.value))} className={styles.select}>
-                  <option value={1}>1x (À Vista)</option>
-                  <option value={2}>2x</option>
-                  <option value={3}>3x</option>
-                  <option value={4}>4x</option>
-                  <option value={5}>5x</option>
-                  <option value={6}>6x</option>
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>Parcelamento</label>
+                <select 
+                  value={installments} 
+                  onChange={e => setInstallments(Number(e.target.value))} 
+                  className={styles.selectInput}
+                >
+                  <option value={1}>1x de R$ {total.toFixed(2)} (À Vista no Cartão)</option>
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => (
+                    <option key={num} value={num}>
+                      {num}x de R$ {(total / num).toFixed(2)}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
 
+            {/* Desconto à Vista / PIX */}
             {(paymentMethod === 'A_VISTA' || paymentMethod === 'PIX') && (
-              <div className={styles.field}>
-                <label>Desconto (%)</label>
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>Desconto à Vista (%)</label>
                 <input 
                   type="number" 
                   min="0" 
                   max="100" 
                   value={discount} 
-                  onChange={e => setDiscount(Number(e.target.value))} 
-                  className={styles.select}
+                  onChange={e => setDiscount(Math.max(0, Math.min(100, Number(e.target.value))))} 
+                  className={styles.selectInput}
+                  placeholder="0"
                 />
               </div>
             )}
 
-            {/* Painel de Pagamento Múltiplo / Dividido */}
+            {/* Divisão Múltipla de Pagamento */}
             {paymentMethod === 'MULTIPLO' && (
-              <div style={{ background: 'var(--background)', padding: '1rem', borderRadius: '8px', marginTop: '0.5rem', border: '1px solid var(--border-gold)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <strong style={{ fontSize: '0.85rem' }}>Divisão do Pagamento:</strong>
-                  <Button type="button" variant="secondary" onClick={addSplitRow} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
-                    + Adicionar Forma
-                  </Button>
+              <div className={styles.splitPaymentBox}>
+                <div className={styles.splitHeader}>
+                  <strong style={{ fontSize: '0.8rem', color: 'var(--foreground)' }}>Divisão do Valor:</strong>
+                  <button 
+                    type="button" 
+                    onClick={addSplitRow} 
+                    style={{ 
+                      fontSize: '0.72rem', 
+                      padding: '0.2rem 0.5rem', 
+                      background: 'var(--gold-primary)', 
+                      color: '#000', 
+                      border: 'none', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer',
+                      fontWeight: 700 
+                    }}
+                  >
+                    + Forma
+                  </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                   {splitPayments.map((row, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <div key={idx} className={styles.splitRow}>
                       <select 
                         value={row.method} 
                         onChange={(e) => updateSplitRow(idx, 'method', e.target.value)}
-                        className={styles.select}
-                        style={{ width: '110px', fontSize: '0.75rem', padding: '0.4rem' }}
+                        className={styles.selectInput}
+                        style={{ width: '95px', fontSize: '0.75rem', padding: '0.35rem 0.4rem' }}
                       >
                         <option value="PIX">PIX</option>
                         <option value="A_VISTA">Dinheiro</option>
@@ -412,16 +679,16 @@ function POSPageContent() {
                         min="0"
                         value={row.amount || ''}
                         onChange={(e) => updateSplitRow(idx, 'amount', parseFloat(e.target.value) || 0)}
-                        className={styles.select}
-                        style={{ flex: 1, fontSize: '0.8rem', padding: '0.4rem' }}
+                        className={styles.selectInput}
+                        style={{ flex: 1, fontSize: '0.8rem', padding: '0.35rem 0.5rem' }}
                       />
 
                       {row.method === 'CARTAO' && (
                         <select 
                           value={row.installments || 1}
                           onChange={(e) => updateSplitRow(idx, 'installments', Number(e.target.value))}
-                          className={styles.select}
-                          style={{ width: '65px', fontSize: '0.75rem', padding: '0.4rem' }}
+                          className={styles.selectInput}
+                          style={{ width: '60px', fontSize: '0.75rem', padding: '0.35rem 0.2rem' }}
                         >
                           <option value={1}>1x</option>
                           <option value={2}>2x</option>
@@ -433,7 +700,12 @@ function POSPageContent() {
                       )}
 
                       {splitPayments.length > 1 && (
-                        <button type="button" onClick={() => removeSplitRow(idx)} style={{ color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                        <button 
+                          type="button" 
+                          onClick={() => removeSplitRow(idx)} 
+                          style={{ color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '0.2rem' }}
+                          title="Remover forma"
+                        >
                           ✕
                         </button>
                       )}
@@ -441,9 +713,9 @@ function POSPageContent() {
                   ))}
                 </div>
 
-                <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
+                <div className={styles.splitSumRow}>
                   <span>Soma: <strong>R$ {splitTotal.toFixed(2)}</strong></span>
-                  <span style={{ color: Math.abs(splitDifference) < 0.05 ? 'var(--success)' : 'var(--error)', fontWeight: 600 }}>
+                  <span style={{ color: Math.abs(splitDifference) < 0.05 ? 'var(--success)' : 'var(--error)', fontWeight: 700 }}>
                     {Math.abs(splitDifference) < 0.05 ? '✓ Total Conferido' : `Restante: R$ ${splitDifference.toFixed(2)}`}
                   </span>
                 </div>
@@ -451,38 +723,47 @@ function POSPageContent() {
             )}
           </div>
 
-          <div className={styles.totalRow} style={{ borderBottom: '1px solid #eee', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
-            <span>Subtotal:</span>
-            <span>R$ {subtotal.toFixed(2)}</span>
-          </div>
-          {discountValue > 0 && (
-            <div className={styles.totalRow} style={{ color: 'var(--success)' }}>
-              <span>Desconto:</span>
-              <span>- R$ {discountValue.toFixed(2)}</span>
+          {/* Resumo Financeiro */}
+          <div className={styles.summaryBox}>
+            <div className={styles.summaryRow}>
+              <span>Subtotal Itens:</span>
+              <span>R$ {subtotal.toFixed(2)}</span>
             </div>
-          )}
-          {depositAmount > 0 && (
-            <div className={styles.totalRow} style={{ color: 'var(--success)' }}>
-              <span>Sinal Abatido:</span>
-              <span>- R$ {depositAmount.toFixed(2)} ({depositMethod})</span>
+            
+            {discountValue > 0 && (
+              <div className={`${styles.summaryRow} ${styles.summaryDiscount}`}>
+                <span>Desconto ({discount}%):</span>
+                <span>- R$ {discountValue.toFixed(2)}</span>
+              </div>
+            )}
+
+            {depositAmount > 0 && (
+              <div className={`${styles.summaryRow} ${styles.summaryDiscount}`}>
+                <span>Sinal Pago ({depositMethod}):</span>
+                <span>- R$ {depositAmount.toFixed(2)}</span>
+              </div>
+            )}
+
+            <div className={styles.summaryTotal}>
+              <span className={styles.totalLabel}>Total a Cobrar</span>
+              <span className={styles.totalValue}>R$ {total.toFixed(2)}</span>
             </div>
-          )}
-          <div className={styles.totalRow}>
-            <span>TOTAL A COBRAR:</span>
-            <span className={styles.totalAmount}>R$ {total.toFixed(2)}</span>
           </div>
 
-          <Button 
-            className={styles.finalizarBtn} 
+          {/* Botão de Finalização */}
+          <button 
+            type="button"
+            className={styles.submitBtn} 
             onClick={handleCheckout} 
             disabled={submitting || cart.length === 0 || !selectedCustomer}
           >
-            {submitting ? 'Processando Faturamento...' : 'Finalizar Faturamento'}
-          </Button>
-        </Card>
+            {submitting ? 'Processando Venda...' : 'Finalizar Faturamento'}
+          </button>
+        </aside>
+
       </div>
 
-      {/* Recibo / Cupom Não-Fiscal para Impressão Térmica (80mm) */}
+      {/* ── Recibo / Cupom Não-Fiscal para Impressão Térmica (80mm) ── */}
       {saleResult && (
         <div className={rStyles.receiptOverlay}>
           <div className={rStyles.receiptContainer}>
@@ -521,9 +802,9 @@ function POSPageContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {saleResult.items.map((item: any) => (
+                  {saleResult.items?.map((item: any) => (
                     <tr key={item.id}>
-                      <td>{item.product.name}</td>
+                      <td>{item.product?.name}</td>
                       <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                       <td style={{ textAlign: 'right' }}>R$ {(item.price * item.quantity).toFixed(2)}</td>
                     </tr>
